@@ -1,17 +1,22 @@
 package com.pneumasoft.multitimer
 
-// In MainActivity.kt, add this import at the top of the file
 import TimerAdapter
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.EditText
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.pneumasoft.multitimer.databinding.ActivityMainBinding
 import com.pneumasoft.multitimer.viewmodel.TimerViewModel
 import kotlinx.coroutines.launch
+import android.Manifest
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -23,14 +28,53 @@ class MainActivity : AppCompatActivity() {
         onDeleteClick = { id -> viewModel.deleteTimer(id) }
     )
 
+    // app/src/main/java/com/pneumasoft/multitimer/MainActivity.kt
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Request notification permissions for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_CODE
+                )
+            }
+        }
+
         setupRecyclerView()
         setupAddButton()
         observeTimers()
+    }
+
+    // Add permission result handling
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == NOTIFICATION_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                // Permission denied - inform user that timers may not work properly
+                Toast.makeText(
+                    this,
+                    "Notification permission is required for timer alerts",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    companion object {
+        private const val NOTIFICATION_PERMISSION_CODE = 100
     }
 
     private fun setupRecyclerView() {
