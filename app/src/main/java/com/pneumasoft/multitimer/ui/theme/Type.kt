@@ -1,4 +1,4 @@
-package com.example.multitimer.ui.theme
+package com.pneumasoft.multitimer.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

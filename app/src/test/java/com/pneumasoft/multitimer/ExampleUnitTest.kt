@@ -1,4 +1,4 @@
-package com.example.multitimer
+package com.pneumasoft.multitimer
 
 import org.junit.Test
 
