@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.multitimer"
+    namespace = "com.pneumasoft.multitimer"
     compileSdk = 35
 
     defaultConfig {
@@ -36,6 +36,8 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
+        // dataBinding = true
     }
 }
 

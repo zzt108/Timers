@@ -1,16 +1,22 @@
 package com.pneumasoft.multitimer
 
+// In MainActivity.kt, add this import at the top of the file
 import TimerAdapter
 import android.os.Bundle
+import android.widget.EditText
+import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.example.multitimer.R
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.pneumasoft.multitimer.databinding.ActivityMainBinding
 import com.pneumasoft.multitimer.viewmodel.TimerViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: TimerViewModel by viewModels()
     private val adapter = TimerAdapter(
-        emptyList(),
         onStartPauseClick = { id -> handleStartPause(id) },
         onResetClick = { id -> viewModel.resetTimer(id) },
         onEditClick = { id -> showEditTimerDialog(id) },

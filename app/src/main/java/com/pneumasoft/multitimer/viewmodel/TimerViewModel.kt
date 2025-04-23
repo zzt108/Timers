@@ -6,9 +6,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 class TimerViewModel : ViewModel() {
@@ -45,43 +47,35 @@ class TimerViewModel : ViewModel() {
         }
     }
 
+    private fun createTimerFlow(durationSeconds: Int): Flow<Int> = flow {
+        for (seconds in durationSeconds downTo 0) {
+            emit(seconds)
+            delay(1000)
+        }
+    }
+
     fun startTimer(id: String) {
         val timer = _timers.value.find { it.id == id } ?: return
         if (timer.isRunning) return
 
-        // Mark timer as running
+        // Update timer state to running
         _timers.value = _timers.value.map {
             if (it.id == id) it.copy(isRunning = true) else it
         }
 
-        // Start a coroutine for this timer
+        // Start the timer flow
         val job = viewModelScope.launch {
-            // Create a flow that emits remaining seconds every second
-            (timer.remainingSeconds downTo 0).asFlow()
-                .onEach { delay(1000) } // Wait 1 second between emissions
+            createTimerFlow(timer.remainingSeconds)
                 .collect { remainingSeconds ->
-                    // Update the timer's remaining seconds
                     _timers.value = _timers.value.map {
-                        if (it.id == id) {
-                            it.copy(remainingSeconds = remainingSeconds)
-                        } else {
-                            it
-                        }
+                        if (it.id == id) it.copy(remainingSeconds = remainingSeconds) else it
                     }
 
-                    // When timer completes
                     if (remainingSeconds == 0) {
+                        // Timer completed
                         _timers.value = _timers.value.map {
-                            if (it.id == id) {
-                                it.copy(
-                                    isRunning = false,
-                                    completionTimestamp = System.currentTimeMillis()
-                                )
-                            } else {
-                                it
-                            }
+                            if (it.id == id) it.copy(isRunning = false) else it
                         }
-                        activeTimers.remove(id)
                     }
                 }
         }
