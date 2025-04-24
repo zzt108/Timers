@@ -88,14 +88,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        if (isServiceBound) {
-            unbindService(serviceConnection)
-            isServiceBound = false
-        }
-    }
-
     // Add permission result handling
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -117,13 +109,30 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        bindTimerService()
+        Intent(this, TimerService::class.java).also { intent ->
+            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(Intent(this, TimerService::class.java))
+        } else {
+            startService(Intent(this, TimerService::class.java))
+        }
     }
 
     override fun onStop() {
         super.onStop()
         // Don't unbind here if you want the service to continue in the background
         // Only unbind if you want the service to stop when the app is not visible
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Only unbind if app is being destroyed
+        if (isServiceBound) {
+            unbindService(serviceConnection)
+            isServiceBound = false
+        }
     }
 
     companion object {

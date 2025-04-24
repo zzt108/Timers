@@ -55,46 +55,39 @@ class TimerViewModel : ViewModel() {
         }
     }
 
-    // In TimerViewModel.kt
     fun startTimer(id: String) {
-        try {
-            val timer = _timers.value.find { it.id == id } ?: return
-            if (timer.isRunning) return
+        val timer = _timers.value.find { it.id == id } ?: return
+        if (timer.isRunning) return
 
-            // Update timer state to running
-            _timers.value = _timers.value.map {
-                if (it.id == id) it.copy(isRunning = true) else it
-            }
+        // Update timer state to running
+        _timers.value = _timers.value.map {
+            if (it.id == id) it.copy(isRunning = true) else it
+        }
 
-            // Start the timer flow
-            val job = viewModelScope.launch {
-                try {
-                    createTimerFlow(timer.remainingSeconds)
-                        .collect { remainingSeconds ->
+        // Use SupervisorJob for better error isolation
+        val job = viewModelScope.launch(Dispatchers.Default + SupervisorJob()) {
+            try {
+                createTimerFlow(timer.remainingSeconds)
+                    .collect { remainingSeconds ->
+                        _timers.value = _timers.value.map {
+                            if (it.id == id) it.copy(remainingSeconds = remainingSeconds) else it
+                        }
+
+                        if (remainingSeconds == 0) {
                             _timers.value = _timers.value.map {
-                                if (it.id == id) it.copy(remainingSeconds = remainingSeconds) else it
-                            }
-
-                            if (remainingSeconds == 0) {
-                                // Timer completed
-                                _timers.value = _timers.value.map {
-                                    if (it.id == id) it.copy(isRunning = false, completionTimestamp = System.currentTimeMillis()) else it
-                                }
+                                if (it.id == id) it.copy(isRunning = false, completionTimestamp = System.currentTimeMillis()) else it
                             }
                         }
-                } catch (e: Exception) {
-                    Log.e("TimerViewModel", "Error in timer flow: ${e.message}", e)
-                    // Reset timer state on error
-                    _timers.value = _timers.value.map {
-                        if (it.id == id) it.copy(isRunning = false) else it
                     }
+            } catch (e: Exception) {
+                Log.e("TimerViewModel", "Timer error: ${e.message}", e)
+                _timers.value = _timers.value.map {
+                    if (it.id == id) it.copy(isRunning = false) else it
                 }
             }
-
-            activeTimers[id] = job
-        } catch (e: Exception) {
-            Log.e("TimerViewModel", "Failed to start timer: ${e.message}", e)
         }
+
+        activeTimers[id] = job
     }
 
     fun pauseTimer(id: String) {

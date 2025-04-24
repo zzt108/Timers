@@ -31,23 +31,24 @@ class TimerService : Service() {
     }
 
     private fun startForegroundService() {
-        // Create a pending intent for notification tap
-        val notificationIntent = Intent(this, MainActivity::class.java)
+        val notificationIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
         val pendingIntent = PendingIntent.getActivity(
             this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Build the notification
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("MultiTimer App")
-            .setContentText("Timers running")
+            .setContentTitle("MultiTimer Running")
+            .setContentText("Managing your timers")
             .setSmallIcon(R.drawable.ic_timer_simple)
             .setContentIntent(pendingIntent)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
-        // Start as foreground service
         startForeground(NOTIFICATION_ID, notification)
     }
 
