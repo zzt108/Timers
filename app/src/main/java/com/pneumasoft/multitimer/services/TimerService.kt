@@ -15,10 +15,12 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.pneumasoft.multitimer.MainActivity
 import com.pneumasoft.multitimer.R
+import com.pneumasoft.multitimer.repository.TimerRepository
 import java.util.Timer
 
 class TimerService : Service() {
     private val binder = LocalBinder()
+    private lateinit var repository: TimerRepository
 
     inner class LocalBinder : Binder() {
         fun getService(): TimerService = this@TimerService
@@ -52,10 +54,9 @@ class TimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        repository = TimerRepository(applicationContext)
         createNotificationChannel()
         startForegroundService()
-
-        // Register for system events to improve service stability
         registerReceivers()
     }
 

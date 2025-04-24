@@ -30,10 +30,9 @@ class TimerAdapter(
         holder.binding.apply {
             timerName.text = timer.name
             timerDisplay.text = formatTime(timer.remainingSeconds)
-
             startPauseButton.text = if (timer.isRunning) "Pause" else "Start"
-            startPauseButton.setOnClickListener { onStartPauseClick(timer.id) }
 
+            startPauseButton.setOnClickListener { onStartPauseClick(timer.id) }
             resetButton.setOnClickListener { onResetClick(timer.id) }
             editButton.setOnClickListener { onEditClick(timer.id) }
             deleteButton.setOnClickListener { onDeleteClick(timer.id) }

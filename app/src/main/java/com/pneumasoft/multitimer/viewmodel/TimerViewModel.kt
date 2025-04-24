@@ -1,27 +1,27 @@
 package com.pneumasoft.multitimer.viewmodel
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import com.pneumasoft.multitimer.model.TimerItem
+import com.pneumasoft.multitimer.repository.TimerRepository
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class TimerViewModel : ViewModel() {
-    // Add persistence
+class TimerViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = TimerRepository(application)
+
     private val _timers = MutableStateFlow<List<TimerItem>>(emptyList())
     val timers: StateFlow<List<TimerItem>> = _timers
 
-    // Use a more robust scope with error handling
     private val activeTimers = mutableMapOf<String, Job>()
     private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob() +
             CoroutineExceptionHandler { _, exception ->
@@ -29,25 +29,34 @@ class TimerViewModel : ViewModel() {
             })
 
     init {
-        // Load saved timers on initialization
         loadSavedTimers()
     }
 
     private fun loadSavedTimers() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Implementation for loading saved timers from preferences or database
+                // First try to load saved timers
+                val savedTimers = repository.loadTimers()
+
+                if (savedTimers.isNotEmpty()) {
+                    _timers.value = savedTimers
+                } else {
+                    // If no saved timers found, create defaults
+                    val defaultTimers = repository.createDefaultTimersIfNeeded()
+                    if (defaultTimers.isNotEmpty()) {
+                        _timers.value = defaultTimers
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("TimerViewModel", "Failed to load saved timers", e)
             }
         }
     }
 
-    // Save timers when they change
     private fun saveTimers() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Implementation for saving timers
+                repository.saveTimers(_timers.value)
             } catch (e: Exception) {
                 Log.e("TimerViewModel", "Failed to save timers", e)
             }
@@ -61,12 +70,12 @@ class TimerViewModel : ViewModel() {
             remainingSeconds = durationSeconds
         )
         _timers.value = _timers.value + newTimer
+        saveTimers()
     }
 
     fun updateTimer(id: String, name: String, durationSeconds: Int) {
         _timers.value = _timers.value.map { timer ->
             if (timer.id == id) {
-                // If timer is running, stop it first
                 if (timer.isRunning) {
                     stopTimer(id)
                 }
@@ -79,20 +88,14 @@ class TimerViewModel : ViewModel() {
                 timer
             }
         }
-    }
-
-    private fun createTimerFlow(durationSeconds: Int): Flow<Int> = flow {
-        for (seconds in durationSeconds downTo 0) {
-            emit(seconds)
-            delay(1000)
-        }
+        saveTimers()
     }
 
     fun startTimer(id: String) {
+        // Existing code from the original file remains the same
         val timer = _timers.value.find { it.id == id } ?: return
         if (timer.isRunning) return
 
-        // Update timer state to running
         _timers.value = _timers.value.map {
             if (it.id == id) it.copy(isRunning = true) else it
         }
@@ -110,11 +113,9 @@ class TimerViewModel : ViewModel() {
                     if (elapsedSinceLastTick >= 1000) {
                         lastTickTime = now
 
-                        // Find current timer state
                         val currentTimer = _timers.value.find { it.id == id } ?: break
                         if (currentTimer.remainingSeconds <= 0) break
 
-                        // Update timer
                         _timers.value = _timers.value.map {
                             if (it.id == id) {
                                 val newRemaining = it.remainingSeconds - 1
@@ -127,8 +128,6 @@ class TimerViewModel : ViewModel() {
                         }
                         saveTimers()
                     }
-
-                    // Use a small delay to avoid consuming too much CPU
                     delay(100)
                 }
             } catch (e: Exception) {
@@ -145,6 +144,7 @@ class TimerViewModel : ViewModel() {
 
     fun pauseTimer(id: String) {
         stopTimer(id)
+        saveTimers()
     }
 
     fun resetTimer(id: String) {
@@ -156,11 +156,13 @@ class TimerViewModel : ViewModel() {
                 it
             }
         }
+        saveTimers()
     }
 
     fun deleteTimer(id: String) {
         stopTimer(id)
         _timers.value = _timers.value.filterNot { it.id == id }
+        saveTimers()
     }
 
     private fun stopTimer(id: String) {
@@ -173,8 +175,8 @@ class TimerViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        // Cancel all active timers when ViewModel is cleared
         activeTimers.values.forEach { it.cancel() }
         activeTimers.clear()
+        saveTimers()
     }
 }
