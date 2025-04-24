@@ -132,6 +132,9 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
                         _timers.value = _timers.value.map {
                             if (it.id == id) {
                                 val newRemaining = it.remainingSeconds - 1
+                                if (newRemaining <= 0) {
+                                    sendTimerCompletedBroadcast(id, it.name)
+                                }
                                 it.copy(
                                     remainingSeconds = newRemaining,
                                     isRunning = newRemaining > 0,
