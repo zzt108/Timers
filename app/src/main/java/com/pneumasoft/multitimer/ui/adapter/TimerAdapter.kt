@@ -2,6 +2,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import com.pneumasoft.multitimer.R
 import com.pneumasoft.multitimer.databinding.ItemTimerBinding
 import com.pneumasoft.multitimer.model.TimerItem
 
@@ -35,7 +36,9 @@ class TimerAdapter(
             // Set the progress on the actual ProgressBar view
             secondsProgress.progress = secondsValue
 
-            startPauseButton.text = if (timer.isRunning) "Pause" else "Start"
+            startPauseButton.setImageResource(
+                if (timer.isRunning) R.drawable.ic_pause else R.drawable.ic_play
+            )
             startPauseButton.setOnClickListener { onStartPauseClick(timer.id) }
             resetButton.setOnClickListener { onResetClick(timer.id) }
             editButton.setOnClickListener { onEditClick(timer.id) }
