@@ -228,10 +228,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showEditTimerDialog(id: String) {
-        // Similar to add dialog but pre-fills values and updates existing timer
+        // Find the timer to edit
         val timer = viewModel.timers.value.find { it.id == id } ?: return
 
-        // Implementation similar to showAddTimerDialog but with pre-filled values
-        // and calls viewModel.updateTimer() instead
+        // Inflate the same dialog layout used for adding timers
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
+
+        // Get references to the input fields
+        val nameEditText = dialogView.findViewById<EditText>(R.id.timer_name_edit)
+        val minutesEditText = dialogView.findViewById<EditText>(R.id.timer_minutes_edit)
+        val secondsEditText = dialogView.findViewById<EditText>(R.id.timer_seconds_edit)
+
+        // Pre-fill fields with current timer values
+        nameEditText.setText(timer.name)
+        val minutes = timer.durationSeconds / 60
+        val seconds = timer.durationSeconds % 60
+        minutesEditText.setText(minutes.toString())
+        secondsEditText.setText(seconds.toString())
+
+        // Create and show the dialog
+        AlertDialog.Builder(this)
+            .setTitle("Edit Timer")
+            .setView(dialogView)
+            .setPositiveButton("Update") { _, _ ->
+                val name = nameEditText.text.toString()
+                val updatedMinutes = minutesEditText.text.toString().toIntOrNull() ?: 0
+                val updatedSeconds = secondsEditText.text.toString().toIntOrNull() ?: 0
+                val totalSeconds = updatedMinutes * 60 + updatedSeconds
+
+                if (name.isNotBlank() && totalSeconds > 0) {
+                    viewModel.updateTimer(id, name, totalSeconds)
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Timer needs a name and duration greater than zero",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }
