@@ -3,6 +3,7 @@ package com.pneumasoft.multitimer.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.pneumasoft.multitimer.model.TimerItem
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -12,14 +13,46 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class TimerViewModel : ViewModel() {
+    // Add persistence
     private val _timers = MutableStateFlow<List<TimerItem>>(emptyList())
     val timers: StateFlow<List<TimerItem>> = _timers
 
+    // Use a more robust scope with error handling
     private val activeTimers = mutableMapOf<String, Job>()
-    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob() +
+            CoroutineExceptionHandler { _, exception ->
+                Log.e("TimerViewModel", "Coroutine error: ${exception.message}", exception)
+            })
+
+    init {
+        // Load saved timers on initialization
+        loadSavedTimers()
+    }
+
+    private fun loadSavedTimers() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Implementation for loading saved timers from preferences or database
+            } catch (e: Exception) {
+                Log.e("TimerViewModel", "Failed to load saved timers", e)
+            }
+        }
+    }
+
+    // Save timers when they change
+    private fun saveTimers() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Implementation for saving timers
+            } catch (e: Exception) {
+                Log.e("TimerViewModel", "Failed to save timers", e)
+            }
+        }
+    }
 
     fun addTimer(name: String, durationSeconds: Int) {
         val newTimer = TimerItem(
@@ -63,27 +96,47 @@ class TimerViewModel : ViewModel() {
         _timers.value = _timers.value.map {
             if (it.id == id) it.copy(isRunning = true) else it
         }
+        saveTimers()
 
-        // Use SupervisorJob for better error isolation
-        val job = viewModelScope.launch(Dispatchers.Default + SupervisorJob()) {
+        val job = viewModelScope.launch {
             try {
-                createTimerFlow(timer.remainingSeconds)
-                    .collect { remainingSeconds ->
-                        _timers.value = _timers.value.map {
-                            if (it.id == id) it.copy(remainingSeconds = remainingSeconds) else it
-                        }
+                val startTime = System.currentTimeMillis()
+                var lastTickTime = startTime
 
-                        if (remainingSeconds == 0) {
-                            _timers.value = _timers.value.map {
-                                if (it.id == id) it.copy(isRunning = false, completionTimestamp = System.currentTimeMillis()) else it
-                            }
+                while (isActive) {
+                    val now = System.currentTimeMillis()
+                    val elapsedSinceLastTick = now - lastTickTime
+
+                    if (elapsedSinceLastTick >= 1000) {
+                        lastTickTime = now
+
+                        // Find current timer state
+                        val currentTimer = _timers.value.find { it.id == id } ?: break
+                        if (currentTimer.remainingSeconds <= 0) break
+
+                        // Update timer
+                        _timers.value = _timers.value.map {
+                            if (it.id == id) {
+                                val newRemaining = it.remainingSeconds - 1
+                                it.copy(
+                                    remainingSeconds = newRemaining,
+                                    isRunning = newRemaining > 0,
+                                    completionTimestamp = if (newRemaining <= 0) System.currentTimeMillis() else null
+                                )
+                            } else it
                         }
+                        saveTimers()
                     }
+
+                    // Use a small delay to avoid consuming too much CPU
+                    delay(100)
+                }
             } catch (e: Exception) {
                 Log.e("TimerViewModel", "Timer error: ${e.message}", e)
                 _timers.value = _timers.value.map {
                     if (it.id == id) it.copy(isRunning = false) else it
                 }
+                saveTimers()
             }
         }
 

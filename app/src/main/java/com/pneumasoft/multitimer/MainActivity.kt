@@ -62,17 +62,17 @@ class MainActivity : AppCompatActivity() {
         observeTimers()
     }
 
-    // In MainActivity.kt
     private fun bindTimerService() {
         val serviceIntent = Intent(this, TimerService::class.java)
 
-        // Start and bind to the service
+        // First start as foreground service
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent)
         } else {
             startService(serviceIntent)
         }
 
+        // Then bind to it
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
@@ -88,7 +88,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Add permission result handling
+    private fun checkAndRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // Request the permission
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_CODE
+                )
+            } else {
+                // Permission already granted, safe to proceed with notifications
+                initializeTimerService()
+            }
+        } else {
+            // For lower Android versions, just initialize directly
+            initializeTimerService()
+        }
+    }
+
+    private fun initializeTimerService() {
+        // Only bind to service if permissions are granted
+        bindTimerService()
+    }
+
+    // Improve the permission result handling
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -96,13 +124,19 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == NOTIFICATION_PERMISSION_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                // Permission denied - inform user that timers may not work properly
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, initialize service
+                initializeTimerService()
+            } else {
+                // Permission denied - inform user that timers may not function properly
                 Toast.makeText(
                     this,
-                    "Notification permission is required for timer alerts",
+                    "Timer notifications will not work without permission. Timers may stop in background.",
                     Toast.LENGTH_LONG
                 ).show()
+
+                // Still initialize, but service will have limited functionality
+                initializeTimerService()
             }
         }
     }
@@ -128,7 +162,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Only unbind if app is being destroyed
+        // Properly clean up service connection
         if (isServiceBound) {
             unbindService(serviceConnection)
             isServiceBound = false
