@@ -204,23 +204,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddTimerDialog() {
-        // Implementation for dialog to add a new timer
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
+
         val nameEditText = dialogView.findViewById<EditText>(R.id.timer_name_edit)
+        val hoursEditText = dialogView.findViewById<EditText>(R.id.timer_hours_edit)
         val minutesEditText = dialogView.findViewById<EditText>(R.id.timer_minutes_edit)
-        val secondsEditText = dialogView.findViewById<EditText>(R.id.timer_seconds_edit)
 
         AlertDialog.Builder(this)
             .setTitle("Add New Timer")
             .setView(dialogView)
             .setPositiveButton("Add") { _, _ ->
                 val name = nameEditText.text.toString()
+                val hours = hoursEditText.text.toString().toIntOrNull() ?: 0
                 val minutes = minutesEditText.text.toString().toIntOrNull() ?: 0
-                val seconds = secondsEditText.text.toString().toIntOrNull() ?: 0
-                val totalSeconds = minutes * 60 + seconds
+
+                // Calculate total seconds (hours to seconds + minutes to seconds)
+                // Note: Seconds are always 0 as per requirements
+                val totalSeconds = hours * 3600 + minutes * 60
 
                 if (name.isNotBlank() && totalSeconds > 0) {
                     viewModel.addTimer(name, totalSeconds)
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Timer needs a name and duration greater than zero",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -231,20 +240,24 @@ class MainActivity : AppCompatActivity() {
         // Find the timer to edit
         val timer = viewModel.timers.value.find { it.id == id } ?: return
 
-        // Inflate the same dialog layout used for adding timers
+        // Inflate the dialog layout
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
 
         // Get references to the input fields
         val nameEditText = dialogView.findViewById<EditText>(R.id.timer_name_edit)
+        val hoursEditText = dialogView.findViewById<EditText>(R.id.timer_hours_edit)
         val minutesEditText = dialogView.findViewById<EditText>(R.id.timer_minutes_edit)
-        val secondsEditText = dialogView.findViewById<EditText>(R.id.timer_seconds_edit)
 
         // Pre-fill fields with current timer values
         nameEditText.setText(timer.name)
-        val minutes = timer.durationSeconds / 60
-        val seconds = timer.durationSeconds % 60
+
+        // Convert total seconds to hours and minutes
+        val totalSeconds = timer.durationSeconds
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+
+        hoursEditText.setText(hours.toString())
         minutesEditText.setText(minutes.toString())
-        secondsEditText.setText(seconds.toString())
 
         // Create and show the dialog
         AlertDialog.Builder(this)
@@ -252,12 +265,14 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogView)
             .setPositiveButton("Update") { _, _ ->
                 val name = nameEditText.text.toString()
+                val updatedHours = hoursEditText.text.toString().toIntOrNull() ?: 0
                 val updatedMinutes = minutesEditText.text.toString().toIntOrNull() ?: 0
-                val updatedSeconds = secondsEditText.text.toString().toIntOrNull() ?: 0
-                val totalSeconds = updatedMinutes * 60 + updatedSeconds
 
-                if (name.isNotBlank() && totalSeconds > 0) {
-                    viewModel.updateTimer(id, name, totalSeconds)
+                // Calculate total seconds (seconds are always 0)
+                val newTotalSeconds = updatedHours * 3600 + updatedMinutes * 60
+
+                if (name.isNotBlank() && newTotalSeconds > 0) {
+                    viewModel.updateTimer(id, name, newTotalSeconds)
                 } else {
                     Toast.makeText(
                         this,

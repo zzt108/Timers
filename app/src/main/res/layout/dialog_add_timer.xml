@@ -7,13 +7,11 @@
     android:layout_margin="8dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="4dp">
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
-
         <!-- Name input field -->
         <TextView
             android:layout_width="wrap_content"
@@ -21,7 +19,6 @@
             android:text="Timer Name"
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
-
         <EditText
             android:id="@+id/timer_name_edit"
             android:layout_width="match_parent"
@@ -29,7 +26,20 @@
             android:hint="Enter timer name"
             android:inputType="text"
             android:layout_marginBottom="16dp"/>
-
+        <!-- Hours input field -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hours"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+        <EditText
+            android:id="@+id/timer_hours_edit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter hours"
+            android:inputType="number"
+            android:layout_marginBottom="16dp"/>
         <!-- Minutes input field -->
         <TextView
             android:layout_width="wrap_content"
@@ -37,28 +47,11 @@
             android:text="Minutes"
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
-
         <EditText
             android:id="@+id/timer_minutes_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Enter minutes"
-            android:inputType="number"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Seconds input field -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Seconds"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
-
-        <EditText
-            android:id="@+id/timer_seconds_edit"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Enter seconds"
             android:inputType="number"
             android:layout_marginBottom="16dp"/>
     </LinearLayout>

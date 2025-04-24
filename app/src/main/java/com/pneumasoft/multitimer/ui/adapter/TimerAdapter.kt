@@ -6,13 +6,12 @@ import com.pneumasoft.multitimer.databinding.ItemTimerBinding
 import com.pneumasoft.multitimer.model.TimerItem
 
 class TimerAdapter(
-    timers: List<TimerItem> = emptyList(),
+    private var timers: List<TimerItem> = emptyList(),
     private val onStartPauseClick: (String) -> Unit,
     private val onResetClick: (String) -> Unit,
     private val onEditClick: (String) -> Unit,
     private val onDeleteClick: (String) -> Unit
 ) : RecyclerView.Adapter<TimerAdapter.TimerViewHolder>() {
-    private var timers: List<TimerItem> = timers
 
     class TimerViewHolder(val binding: ItemTimerBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -30,8 +29,13 @@ class TimerAdapter(
         holder.binding.apply {
             timerName.text = timer.name
             timerDisplay.text = formatTime(timer.remainingSeconds)
-            startPauseButton.text = if (timer.isRunning) "Pause" else "Start"
 
+            // Calculate seconds for the progress indicator
+            val secondsValue = timer.remainingSeconds % 60
+            // Set the progress on the actual ProgressBar view
+            secondsProgress.progress = secondsValue
+
+            startPauseButton.text = if (timer.isRunning) "Pause" else "Start"
             startPauseButton.setOnClickListener { onStartPauseClick(timer.id) }
             resetButton.setOnClickListener { onResetClick(timer.id) }
             editButton.setOnClickListener { onEditClick(timer.id) }
@@ -39,10 +43,15 @@ class TimerAdapter(
         }
     }
 
+    // Format time to show only hours and minutes (no seconds)
     private fun formatTime(seconds: Int): String {
-        val minutes = seconds / 60
-        val remainingSeconds = seconds % 60
-        return "%02d:%02d".format(minutes, remainingSeconds)
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        return if (hours > 0) {
+            "%d:%02d".format(hours, minutes)
+        } else {
+            "%d min".format(minutes)
+        }
     }
 
     fun updateTimers(newTimers: List<TimerItem>) {
@@ -53,11 +62,9 @@ class TimerAdapter(
         val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
             override fun getOldListSize() = oldTimers.size
             override fun getNewListSize() = newTimers.size
-
             override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
                 return oldTimers[oldItemPosition].id == newTimers[newItemPosition].id
             }
-
             override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
                 val old = oldTimers[oldItemPosition]
                 val new = newTimers[newItemPosition]
@@ -70,5 +77,4 @@ class TimerAdapter(
         // Dispatch updates
         diffResult.dispatchUpdatesTo(this)
     }
-
 }
