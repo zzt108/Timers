@@ -1,58 +1,54 @@
 // app/src/main/java/com/pneumasoft/multitimer/services/TimerService.kt
 package com.pneumasoft.multitimer.services
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
+import com.pneumasoft.multitimer.MainActivity
 import com.pneumasoft.multitimer.R
 
 class TimerService : Service() {
     private val binder = LocalBinder()
 
-    // Create notification builder with proper initialization
-    private val notificationBuilder by lazy {
-        NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("MultiTimer App")
-            .setContentText("Timers running")
-            .setSmallIcon(R.drawable.ic_timer)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-    }
-
     inner class LocalBinder : Binder() {
         fun getService(): TimerService = this@TimerService
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+        startForegroundService()
     }
 
     override fun onBind(intent: Intent): IBinder {
         return binder
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        createNotificationChannel()
+    private fun startForegroundService() {
+        // Create a pending intent for notification tap
+        val notificationIntent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, notificationIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
 
-        // Check for notification permission on Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                // Cannot show notification, must stop service
-                stopSelf()
-                return
-            }
-        }
+        // Build the notification
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("MultiTimer App")
+            .setContentText("Timers running")
+            .setSmallIcon(R.drawable.ic_timer_simple)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
 
-        // Start foreground with properly built notification
-        startForeground(NOTIFICATION_ID, notificationBuilder.build())
+        // Start as foreground service
+        startForeground(NOTIFICATION_ID, notification)
     }
 
     private fun createNotificationChannel() {

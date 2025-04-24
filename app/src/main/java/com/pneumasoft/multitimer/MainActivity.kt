@@ -17,6 +17,12 @@ import com.pneumasoft.multitimer.databinding.ActivityMainBinding
 import com.pneumasoft.multitimer.viewmodel.TimerViewModel
 import kotlinx.coroutines.launch
 import android.Manifest
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import com.pneumasoft.multitimer.services.TimerService
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -28,7 +34,9 @@ class MainActivity : AppCompatActivity() {
         onDeleteClick = { id -> viewModel.deleteTimer(id) }
     )
 
-    // app/src/main/java/com/pneumasoft/multitimer/MainActivity.kt
+    private var timerService: TimerService? = null
+    private var isServiceBound = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -54,6 +62,40 @@ class MainActivity : AppCompatActivity() {
         observeTimers()
     }
 
+    // In MainActivity.kt
+    private fun bindTimerService() {
+        val serviceIntent = Intent(this, TimerService::class.java)
+
+        // Start and bind to the service
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+
+        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as TimerService.LocalBinder
+            timerService = binder.getService()
+            isServiceBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            isServiceBound = false
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isServiceBound) {
+            unbindService(serviceConnection)
+            isServiceBound = false
+        }
+    }
+
     // Add permission result handling
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -71,6 +113,17 @@ class MainActivity : AppCompatActivity() {
                 ).show()
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        bindTimerService()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Don't unbind here if you want the service to continue in the background
+        // Only unbind if you want the service to stop when the app is not visible
     }
 
     companion object {
