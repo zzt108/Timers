@@ -22,7 +22,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.util.Log
 import com.pneumasoft.multitimer.services.TimerService
+import android.widget.ImageButton
+import android.widget.TextView
+import android.widget.SeekBar
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -204,64 +208,181 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddTimerDialog() {
-        // Implementation for dialog to add a new timer
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
-        val nameEditText = dialogView.findViewById<EditText>(R.id.timer_name_edit)
-        val minutesEditText = dialogView.findViewById<EditText>(R.id.timer_minutes_edit)
-        val secondsEditText = dialogView.findViewById<EditText>(R.id.timer_seconds_edit)
+        try {
+            // Inflate the dialog view
+            val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
 
-        AlertDialog.Builder(this)
-            .setTitle("Add New Timer")
-            .setView(dialogView)
-            .setPositiveButton("Add") { _, _ ->
+            // Get references to the UI components (fix typo in findViewById)
+            val nameEditText = dialogView.findViewById<EditText>(R.id.timer_name_edit)
+            val hoursValue = dialogView.findViewById<TextView>(R.id.hours_value)
+            val minutesValue = dialogView.findViewById<TextView>(R.id.minutes_value)
+            val timerDisplayText = dialogView.findViewById<TextView>(R.id.timer_display_text)
+            val hoursUpButton = dialogView.findViewById<ImageButton>(R.id.hours_up_button)
+            val hoursDownButton = dialogView.findViewById<ImageButton>(R.id.hours_down_button)
+            val minutesSlider = dialogView.findViewById<SeekBar>(R.id.minutes_slider)
+
+            // Initialize time values
+            var hours = 0
+            var minutes = 0
+
+            // Create function to update the display
+            fun updateDisplay() {
+                val formattedHours = String.format("%02d", hours)
+                val formattedMinutes = String.format("%02d", minutes)
+                timerDisplayText.text = "$formattedHours h $formattedMinutes m"
+                hoursValue.text = formattedHours
+                minutesValue.text = "$formattedMinutes minutes"
+            }
+
+            // Set up hours controls
+            hoursUpButton.setOnClickListener {
+                hours = (hours + 1) % 24 // Wrap around after 23
+                updateDisplay()
+            }
+
+            hoursDownButton.setOnClickListener {
+                hours = if (hours > 0) hours - 1 else 23 // Wrap to 23 when going below 0
+                updateDisplay()
+            }
+
+// Set up minutes slider with SeekBar
+            minutesSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(
+                    seekBar: SeekBar?,
+                    progress: Int,
+                    fromUser: Boolean
+                ) {
+                    minutes = progress
+                    updateDisplay()
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+            // Initial display update
+            updateDisplay()
+
+            // Create the dialog builder with proper context
+            val builder = AlertDialog.Builder(this)
+            builder.setTitle("Add New Timer")
+            builder.setView(dialogView)
+            builder.setPositiveButton("Add") { _, _ ->
                 val name = nameEditText.text.toString()
-                val minutes = minutesEditText.text.toString().toIntOrNull() ?: 0
-                val seconds = secondsEditText.text.toString().toIntOrNull() ?: 0
-                val totalSeconds = minutes * 60 + seconds
+                val totalSeconds = hours * 3600 + minutes * 60
 
-                if (name.isNotBlank() && totalSeconds > 0) {
-                    viewModel.addTimer(name, totalSeconds)
+                if (totalSeconds > 0) {
+                    if (name.isBlank()) {
+                        // If name is empty, use position in list as default
+                        val position = viewModel.timers.value.size + 1
+                        viewModel.addTimer("Timer $position", totalSeconds)
+                    } else {
+                        viewModel.addTimer(name, totalSeconds)
+                    }
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Timer duration must be greater than zero",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            builder.setNegativeButton("Cancel", null)
+
+            // Create and show dialog with error handling
+            val dialog = builder.create()
+            dialog.show()
+        } catch (e: Exception) {
+            // Log the exception for debugging
+            Log.e("TimerDialog", "Error showing dialog: ${e.message}", e)
+            Toast.makeText(
+                this,
+                "Error creating timer dialog: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun showEditTimerDialog(id: String) {
         // Find the timer to edit
         val timer = viewModel.timers.value.find { it.id == id } ?: return
 
-        // Inflate the same dialog layout used for adding timers
+        // Inflate the dialog view
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
 
-        // Get references to the input fields
+        // Get references to the UI components (fixed typo in findViewById)
         val nameEditText = dialogView.findViewById<EditText>(R.id.timer_name_edit)
-        val minutesEditText = dialogView.findViewById<EditText>(R.id.timer_minutes_edit)
-        val secondsEditText = dialogView.findViewById<EditText>(R.id.timer_seconds_edit)
+        val hoursValue = dialogView.findViewById<TextView>(R.id.hours_value)
+        val minutesValue = dialogView.findViewById<TextView>(R.id.minutes_value)
+        val timerDisplayText = dialogView.findViewById<TextView>(R.id.timer_display_text)
+        val hoursUpButton = dialogView.findViewById<ImageButton>(R.id.hours_up_button)
+        val hoursDownButton = dialogView.findViewById<ImageButton>(R.id.hours_down_button)
+        val minutesSlider = dialogView.findViewById<SeekBar>(R.id.minutes_slider)
 
-        // Pre-fill fields with current timer values
+        // Extract current hours and minutes from timer
+        val totalSeconds = timer.durationSeconds
+        var hours = totalSeconds / 3600
+        var minutes = (totalSeconds % 3600) / 60
+
+        // Pre-fill the name field
         nameEditText.setText(timer.name)
-        val minutes = timer.durationSeconds / 60
-        val seconds = timer.durationSeconds % 60
-        minutesEditText.setText(minutes.toString())
-        secondsEditText.setText(seconds.toString())
 
-        // Create and show the dialog
+        // Create function to update the display
+        fun updateDisplay() {
+            val formattedHours = String.format("%02d", hours)
+            val formattedMinutes = String.format("%02d", minutes)
+            timerDisplayText.text = "$formattedHours h $formattedMinutes m"
+            hoursValue.text = formattedHours
+            minutesValue.text = "$formattedMinutes minutes"
+        }
+
+        // Set up hours controls
+        hoursUpButton.setOnClickListener {
+            hours = (hours + 1) % 24
+            updateDisplay()
+        }
+
+        hoursDownButton.setOnClickListener {
+            hours = if (hours > 0) hours - 1 else 23
+            updateDisplay()
+        }
+
+// Set up minutes slider with SeekBar
+        minutesSlider.progress = minutes
+        minutesSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                minutes = progress
+                updateDisplay()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Initial display update
+        updateDisplay()
+
+        // Show the dialog
         AlertDialog.Builder(this)
             .setTitle("Edit Timer")
             .setView(dialogView)
             .setPositiveButton("Update") { _, _ ->
                 val name = nameEditText.text.toString()
-                val updatedMinutes = minutesEditText.text.toString().toIntOrNull() ?: 0
-                val updatedSeconds = secondsEditText.text.toString().toIntOrNull() ?: 0
-                val totalSeconds = updatedMinutes * 60 + updatedSeconds
+                val totalSeconds = hours * 3600 + minutes * 60
 
-                if (name.isNotBlank() && totalSeconds > 0) {
-                    viewModel.updateTimer(id, name, totalSeconds)
+                if (totalSeconds > 0) {
+                    if (name.isBlank()) {
+                        // If name is empty, use position in list
+                        val position = viewModel.timers.value.indexOf(timer) + 1
+                        viewModel.updateTimer(id, "Timer $position", totalSeconds)
+                    } else {
+                        viewModel.updateTimer(id, name, totalSeconds)
+                    }
                 } else {
                     Toast.makeText(
                         this,
-                        "Timer needs a name and duration greater than zero",
+                        "Timer duration must be greater than zero",
                         Toast.LENGTH_SHORT
                     ).show()
                 }

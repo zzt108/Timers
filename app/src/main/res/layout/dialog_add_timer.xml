@@ -26,40 +26,73 @@
             android:id="@+id/timer_name_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter timer name"
+            android:hint="Enter timer name (optional)"
             android:inputType="text"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Minutes input field -->
+        <!-- Time display -->
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Minutes"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
-
-        <EditText
-            android:id="@+id/timer_minutes_edit"
+            android:id="@+id/timer_display_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter minutes"
-            android:inputType="number"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:text="00 h 00 m"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Seconds input field -->
-        <TextView
+        <!-- Hours picker with increment/decrement buttons -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Seconds"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"/>
+            android:orientation="horizontal"
+            android:layout_gravity="center"
+            android:layout_marginBottom="24dp">
 
-        <EditText
-            android:id="@+id/timer_seconds_edit"
+            <ImageButton
+                android:id="@+id/hours_down_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_reset"
+                android:rotation="270"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Decrease hours"/>
+
+            <TextView
+                android:id="@+id/hours_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:minWidth="48dp"
+                android:text="00"/>
+
+            <ImageButton
+                android:id="@+id/hours_up_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_reset"
+                android:rotation="90"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Increase hours"/>
+        </LinearLayout>
+
+        <!-- Minutes slider (using standard SeekBar) -->
+        <SeekBar
+            android:id="@+id/minutes_slider"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter seconds"
-            android:inputType="number"
-            android:layout_marginBottom="16dp"/>
+            android:max="59"
+            android:progress="0"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/minutes_value"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:text="00 minutes"/>
     </LinearLayout>
 </androidx.cardview.widget.CardView>
