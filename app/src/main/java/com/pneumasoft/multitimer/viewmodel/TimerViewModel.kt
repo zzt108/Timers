@@ -126,23 +126,50 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         saveTimers()
     }
 
-    fun updateTimer(id: String, name: String, durationSeconds: Int) {
-        _timers.value = _timers.value.map { timer ->
-            if (timer.id == id) {
-                if (timer.isRunning) {
-                    stopTimer(id)
+// app/src/main/java/com/pneumasoft/multitimer/viewmodel/TimerViewModel.kt
+
+    fun updateTimer(id: String, name: String, durationSeconds: Int, editRemainingTime: Boolean = false) {
+        // Find the timer
+        val timer = _timers.value.find { it.id == id } ?: return
+        val wasRunning = timer.isRunning
+
+        // Pause the timer if it's running (we'll restart it at the end if needed)
+        if (wasRunning) {
+            pauseTimer(id)
+        }
+
+        // Update timer data
+        _timers.value = _timers.value.map { t ->
+            if (t.id == id) {
+                if (editRemainingTime) {
+                    // Editing remaining time (for running timers)
+                    t.copy(
+                        name = name,
+                        remainingSeconds = durationSeconds, // Set new remaining time directly
+                        isRunning = false  // Will be set back to true below if needed
+                    )
+                } else {
+                    // Editing total duration (for stopped timers)
+                    t.copy(
+                        name = name,
+                        durationSeconds = durationSeconds,
+                        remainingSeconds = durationSeconds, // Reset remaining time to full duration
+                        isRunning = false
+                    )
                 }
-                timer.copy(
-                    name = name,
-                    durationSeconds = durationSeconds,
-                    remainingSeconds = durationSeconds
-                )
             } else {
-                timer
+                t
             }
         }
+
+        // If timer was running before, restart it
+        if (wasRunning) {
+            startTimer(id)
+        }
+
         saveTimers()
     }
+
 
     fun startTimer(id: String) {
         val timer = _timers.value.find { it.id == id } ?: return

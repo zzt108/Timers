@@ -154,15 +154,18 @@ class MainActivity : AppCompatActivity() {
                     .setMessage(message)
                     .setPositiveButton("Settings") { _, _ ->
                         try {
-                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                data = Uri.parse("package:$packageName")
-                            }
+                            val intent =
+                                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                    data = Uri.parse("package:$packageName")
+                                }
                             startActivity(intent)
                         } catch (e: Exception) {
                             // Fallback to general battery settings
-                            Toast.makeText(this,
+                            Toast.makeText(
+                                this,
                                 "Please find MultiTimer in your battery settings and disable optimization",
-                                Toast.LENGTH_LONG).show()
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
                     .setNegativeButton("Later", null)
@@ -243,7 +246,8 @@ class MainActivity : AppCompatActivity() {
             builder.setView(dialogView)
             builder.setPositiveButton("Add") { _, _ ->
                 val name = nameEditText.text.toString()
-                val totalSeconds = hours * 3600 + minutes * 60 + 15 // for testing purposes add 10 secs
+                val totalSeconds =
+                    hours * 3600 + minutes * 60 + if (hours+minutes == 0) {15} else {0} // create a 15 sec timer if zero is specified
 
                 if (totalSeconds > 0) {
                     if (name.isBlank()) {
@@ -280,6 +284,7 @@ class MainActivity : AppCompatActivity() {
     private fun showEditTimerDialog(id: String) {
         // Find the timer to edit
         val timer = viewModel.timers.value.find { it.id == id } ?: return
+        val isRunning = timer.isRunning
 
         // Inflate the dialog view
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
@@ -293,10 +298,14 @@ class MainActivity : AppCompatActivity() {
         val hoursDownButton = dialogView.findViewById<ImageButton>(R.id.hours_down_button)
         val minutesSlider = dialogView.findViewById<SeekBar>(R.id.minutes_slider)
 
-        // Extract current hours and minutes from timer
-        val totalSeconds = timer.durationSeconds
+        // Set dialog title based on timer state
+        val dialogTitle = if (isRunning) "Edit Remaining Time" else "Edit Timer Duration"
+
+        // Extract current values - based on what we're editing
+        val totalSeconds = if (isRunning) timer.remainingSeconds else timer.durationSeconds
         var hours = totalSeconds / 3600
         var minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60  // Store seconds separately
 
         // Pre-fill the name field
         nameEditText.setText(timer.name)
@@ -337,20 +346,27 @@ class MainActivity : AppCompatActivity() {
 
         // Show the dialog
         AlertDialog.Builder(this)
-            .setTitle("Edit Timer")
+            .setTitle(dialogTitle)
             .setView(dialogView)
             .setPositiveButton("Update") { _, _ ->
                 val name = nameEditText.text.toString()
-                val totalSeconds = hours * 3600 + minutes * 60
-
-                if (totalSeconds > 0) {
+                val newTotalSeconds = hours * 3600 + minutes * 60 + (if (isRunning) seconds else 0)
+                if (newTotalSeconds > 0) {
                     if (name.isBlank()) {
                         // If name is empty, use position in list
                         val position = viewModel.timers.value.indexOf(timer) + 1
-                        viewModel.updateTimer(id, "Timer $position", totalSeconds)
+                        viewModel.updateTimer(id, "Timer $position", newTotalSeconds, isRunning)
                     } else {
-                        viewModel.updateTimer(id, name, totalSeconds)
+                        viewModel.updateTimer(id, name, newTotalSeconds, isRunning)
                     }
+
+                    // Inform the user what was updated
+                    val message = if (isRunning) {
+                        "Updated remaining time for ${name.ifBlank { "Timer" }}"
+                    } else {
+                        "Updated timer duration for ${name.ifBlank { "Timer" }}"
+                    }
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(
                         this,
@@ -456,6 +472,7 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
                 true
             }
+
             else -> super.onOptionsItemSelected(item)
         }
     }
