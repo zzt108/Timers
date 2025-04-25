@@ -1,10 +1,14 @@
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.pneumasoft.multitimer.R
 import com.pneumasoft.multitimer.databinding.ItemTimerBinding
 import com.pneumasoft.multitimer.model.TimerItem
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class TimerAdapter(
     private var timers: List<TimerItem> = emptyList(),
@@ -41,12 +45,29 @@ class TimerAdapter(
                 if (timer.isRunning) R.drawable.ic_pause else R.drawable.ic_play
             )
 
+            // Calculate and display expiration time
+            if (timer.isRunning) {
+                val expirationTimeText = calculateExpirationTime(timer.remainingSeconds)
+                timerExpirationTime.text = expirationTimeText
+                timerExpirationTime.visibility = View.VISIBLE
+            } else {
+                timerExpirationTime.visibility = View.GONE
+            }
+
             // Set click listeners
             startPauseButton.setOnClickListener { onStartPauseClick(timer.id) }
             resetButton.setOnClickListener { onResetClick(timer.id) }
             editButton.setOnClickListener { onEditClick(timer.id) }
             deleteButton.setOnClickListener { onDeleteClick(timer.id) }
         }
+    }
+
+    private fun calculateExpirationTime(remainingSeconds: Int): String {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.SECOND, remainingSeconds)
+
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        return formatter.format(calendar.time)
     }
 
     // Format time to show only hours and minutes (no seconds)
