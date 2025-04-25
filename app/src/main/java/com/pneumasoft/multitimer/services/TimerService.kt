@@ -145,6 +145,11 @@ class TimerService : Service() {
         }
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // App swiped away from recents - consider saving timer state
+        super.onTaskRemoved(rootIntent)
+    }
+
     private fun updateForegroundNotification(message: String? = null) {
         val notification = createNotification(message)
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

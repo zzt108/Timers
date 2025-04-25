@@ -419,20 +419,34 @@ class MainActivity : AppCompatActivity() {
             val powerManager = getSystemService(POWER_SERVICE) as PowerManager
             val packageName = packageName
             if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                // Show dialog explaining why this is needed
-                AlertDialog.Builder(this)
-                    .setTitle("Battery Optimization")
-                    .setMessage("For timers to work properly when the screen is off, please disable battery optimization for this app.")
-                    .setPositiveButton("Settings") { _, _ ->
-                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                            data = Uri.parse("package:$packageName")
-                        }
-                        startActivity(intent)
+                try {
+                    // Try the direct approach first
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
                     }
-                    .setNegativeButton("Later", null)
-                    .show()
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Fallback to general battery optimization settings
+                    try {
+                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        startActivity(intent)
+                        Toast.makeText(this, "Please find and select MultiTimer in the list", Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        // Last resort - general settings
+                        Toast.makeText(this, "Please manually disable battery optimization for this app in Settings", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }
 
+    private fun getManufacturerSpecificInstructions(): String? {
+        return when (Build.MANUFACTURER.lowercase()) {
+            "xiaomi", "redmi", "poco" -> "Go to Settings > Apps > Manage Apps > MultiTimer > Battery > No restrictions"
+            "huawei", "honor" -> "Go to Settings > Apps > MultiTimer > Battery > App launch"
+            "samsung" -> "Go to Settings > Apps > MultiTimer > Battery > Allow background activity"
+            "oppo", "oneplus", "realme" -> "Go to Settings > Battery > Background apps > MultiTimer"
+            else -> null
+        }
+    }
 }
