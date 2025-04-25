@@ -47,67 +47,6 @@ class TimerService : Service() {
         }
     }
 
-    private fun updateNotification() {
-        // Create a new notification with updated timer count
-        val notification = createNotification()
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, notification)
-    }
-
-    private fun createNotification(): Notification {
-        val notificationIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("MultiTimer Running")
-            .setContentText("Managing your timers")
-            .setSmallIcon(R.drawable.ic_timer_simple)
-            .setContentIntent(pendingIntent)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-
-        // Acquire partial wake lock
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK,
-            "MultiTimer::ServiceWakeLock"
-        )
-        wakeLock?.acquire()
-
-        alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        repository = TimerRepository(applicationContext)
-        createNotificationChannel()
-        createAlarmNotificationChannel() // Create the alarm channel
-        startForegroundService()
-        registerReceivers()
-
-        // Register receiver for timer completions
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            timerCompletionReceiver,
-            IntentFilter(TIMER_COMPLETED_ACTION)
-        )
-    }
-
-    private fun registerReceivers() {
-        // Monitor for potential system kills
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_SCREEN_OFF)
-            addAction(Intent.ACTION_BATTERY_LOW)
-        }
-
-        registerReceiver(systemEventReceiver, filter)
-    }
-
     private val systemEventReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
@@ -123,37 +62,39 @@ class TimerService : Service() {
         }
     }
 
-    override fun onDestroy() {
-
-        // Release wake lock when service is destroyed
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Timer Service Channel"
+            val descriptionText = "Channel for Timer Service"
+            val importance = NotificationManager.IMPORTANCE_LOW // Lower importance
+            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+                setSound(null, null) // Explicitly make it silent
+                enableVibration(false) // Disable vibration too
             }
-        }
-        wakeLock = null
-
-        super.onDestroy()
-        // Unregister timer completion receiver
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(timerCompletionReceiver)
-
-        // Unregister system event receiver
-        try {
-            unregisterReceiver(systemEventReceiver)
-        } catch (e: Exception) {
-            // Ignore if not registered
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
         }
     }
 
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        // App swiped away from recents - consider saving timer state
-        super.onTaskRemoved(rootIntent)
-    }
-
-    private fun updateForegroundNotification(message: String? = null) {
-        val notification = createNotification(message)
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, notification)
+    private fun createAlarmNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Timer Alarms"
+            val descriptionText = "Notifications for completed timers"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(ALARM_CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+                // Configure the notification channel with alarm sound
+                val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                val audioAttributes = AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .build()
+                setSound(alarmSound, audioAttributes)
+            }
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
     }
 
     private fun createNotification(message: String? = null): Notification {
@@ -176,67 +117,11 @@ class TimerService : Service() {
             .build()
     }
 
-    override fun onBind(intent: Intent): IBinder {
-        return binder
-    }
-
-    private fun startForegroundService() {
-        val notificationIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("MultiTimer Running")
-            .setContentText("Managing your timers")
-            .setSmallIcon(R.drawable.ic_timer_simple)
-            .setContentIntent(pendingIntent)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
-
-        startForeground(NOTIFICATION_ID, notification)
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Timer Service Channel"
-            val descriptionText = "Channel for Timer Service"
-            val importance = NotificationManager.IMPORTANCE_LOW // Lower importance
-            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-                description = descriptionText
-                setSound(null, null) // Explicitly make it silent
-                enableVibration(false) // Disable vibration too
-            }
-            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-
-    // Add this method for alarm notification channel
-    private fun createAlarmNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Timer Alarms"
-            val descriptionText = "Notifications for completed timers"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(ALARM_CHANNEL_ID, name, importance).apply {
-                description = descriptionText
-
-                // Configure the notification channel with alarm sound
-                val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                val audioAttributes = AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .build()
-                setSound(alarmSound, audioAttributes)
-            }
-            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
+    private fun updateNotification() {
+        // Create a new notification with updated timer count
+        val notification = createNotification()
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun createTimerCompletionNotification(timerName: String): Notification {
@@ -267,12 +152,49 @@ class TimerService : Service() {
         // Create unique notification ID based on timer ID
         val notificationId = timerId.hashCode()
         val notification = createTimerCompletionNotification(timerName)
-
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(notificationId, notification)
     }
 
-    // New method to schedule a timer using AlarmManager
+    private fun registerReceivers() {
+        // Monitor for potential system kills
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_BATTERY_LOW)
+        }
+
+        registerReceiver(systemEventReceiver, filter)
+    }
+
+    private fun updateForegroundNotification(message: String? = null) {
+        val notification = createNotification(message)
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun startForegroundService() {
+        val notificationIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, notificationIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("MultiTimer Running")
+            .setContentText("Managing your timers")
+            .setSmallIcon(R.drawable.ic_timer_simple)
+            .setContentIntent(pendingIntent)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        startForeground(NOTIFICATION_ID, notification)
+    }
+
+    // Public methods
+
     fun scheduleTimer(timerId: String, timerName: String, durationMillis: Long) {
         val triggerTime = System.currentTimeMillis() + durationMillis
 
@@ -326,6 +248,63 @@ class TimerService : Service() {
         } catch (e: Exception) {
             Log.e("TimerService", "Failed to cancel alarm for timer $timerId", e)
         }
+    }
+
+    // Service lifecycle methods
+
+    override fun onCreate() {
+        super.onCreate()
+
+        // Acquire partial wake lock
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "MultiTimer::ServiceWakeLock"
+        )
+        wakeLock?.acquire()
+
+        alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        repository = TimerRepository(applicationContext)
+        createNotificationChannel()
+        createAlarmNotificationChannel() // Create the alarm channel
+        startForegroundService()
+        registerReceivers()
+
+        // Register receiver for timer completions
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            timerCompletionReceiver,
+            IntentFilter(TIMER_COMPLETED_ACTION)
+        )
+    }
+
+    override fun onDestroy() {
+        // Release wake lock when service is destroyed
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
+        wakeLock = null
+
+        super.onDestroy()
+        // Unregister timer completion receiver
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(timerCompletionReceiver)
+
+        // Unregister system event receiver
+        try {
+            unregisterReceiver(systemEventReceiver)
+        } catch (e: Exception) {
+            // Ignore if not registered
+        }
+    }
+
+    override fun onBind(intent: Intent): IBinder {
+        return binder
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // App swiped away from recents - consider saving timer state
+        super.onTaskRemoved(rootIntent)
     }
 
     companion object {

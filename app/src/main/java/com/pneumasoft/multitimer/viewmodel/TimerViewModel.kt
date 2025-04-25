@@ -24,29 +24,28 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.services.TimerService
 
 class TimerViewModel(application: Application) : AndroidViewModel(application) {
+    // Properties
     private val repository = TimerRepository(application)
-
     private val _timers = MutableStateFlow<List<TimerItem>>(emptyList())
     val timers: StateFlow<List<TimerItem>> = _timers
-
     private val activeTimers = mutableMapOf<String, Job>()
+    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob() +
+            CoroutineExceptionHandler { _, exception ->
+                Log.e("TimerViewModel", "Coroutine error: ${exception.message}", exception)
+            })
 
-    // Add this method to your TimerViewModel class
+    // Initialization
+    init {
+        loadSavedTimers()
+    }
+
+    // Private methods
     private fun sendTimerCompletedBroadcast(id: String, name: String) {
         val intent = Intent(TimerService.TIMER_COMPLETED_ACTION).apply {
             putExtra(TimerService.EXTRA_TIMER_ID, id)
             putExtra(TimerService.EXTRA_TIMER_NAME, name)
         }
         LocalBroadcastManager.getInstance(getApplication()).sendBroadcast(intent)
-    }
-
-    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob() +
-            CoroutineExceptionHandler { _, exception ->
-                Log.e("TimerViewModel", "Coroutine error: ${exception.message}", exception)
-            })
-
-    init {
-        loadSavedTimers()
     }
 
     private fun loadSavedTimers() {
@@ -80,6 +79,43 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun stopTimer(id: String) {
+        // Cancel coroutine job
+        activeTimers[id]?.cancel()
+        activeTimers.remove(id)
+
+        // Update timer state
+        _timers.value = _timers.value.map {
+            if (it.id == id) it.copy(isRunning = false) else it
+        }
+
+        // Cancel the alarm in TimerService
+        cancelAlarmInService(id)
+    }
+
+    private fun cancelAlarmInService(timerId: String) {
+        val context = getApplication<Application>()
+        val serviceIntent = Intent(context, TimerService::class.java)
+
+        context.bindService(serviceIntent, object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                val binder = service as TimerService.LocalBinder
+                val timerService = binder.getService()
+
+                // Cancel the alarm for this timer
+                timerService.cancelTimer(timerId)
+
+                // Unbind from service
+                context.unbindService(this)
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                // Not needed
+            }
+        }, Context.BIND_AUTO_CREATE)
+    }
+
+    // Public methods
     fun addTimer(name: String, durationSeconds: Int) {
         val newTimer = TimerItem(
             name = name,
@@ -213,42 +249,6 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         stopTimer(id)
         _timers.value = _timers.value.filterNot { it.id == id }
         saveTimers()
-    }
-
-    private fun stopTimer(id: String) {
-        // Cancel coroutine job
-        activeTimers[id]?.cancel()
-        activeTimers.remove(id)
-
-        // Update timer state
-        _timers.value = _timers.value.map {
-            if (it.id == id) it.copy(isRunning = false) else it
-        }
-
-        // Cancel the alarm in TimerService
-        cancelAlarmInService(id)
-    }
-
-    private fun cancelAlarmInService(timerId: String) {
-        val context = getApplication<Application>()
-        val serviceIntent = Intent(context, TimerService::class.java)
-
-        context.bindService(serviceIntent, object : ServiceConnection {
-            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                val binder = service as TimerService.LocalBinder
-                val timerService = binder.getService()
-
-                // Cancel the alarm for this timer
-                timerService.cancelTimer(timerId)
-
-                // Unbind from service
-                context.unbindService(this)
-            }
-
-            override fun onServiceDisconnected(name: ComponentName?) {
-                // Not needed
-            }
-        }, Context.BIND_AUTO_CREATE)
     }
 
     override fun onCleared() {

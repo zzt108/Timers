@@ -34,6 +34,7 @@ import android.provider.Settings
 import android.net.Uri
 
 class MainActivity : AppCompatActivity() {
+    // Properties
     private lateinit var binding: ActivityMainBinding
     private val viewModel: TimerViewModel by viewModels()
     private val adapter = TimerAdapter(
@@ -42,37 +43,45 @@ class MainActivity : AppCompatActivity() {
         onEditClick = { id -> showEditTimerDialog(id) },
         onDeleteClick = { id -> viewModel.deleteTimer(id) }
     )
-
     private var timerService: TimerService? = null
     private var isServiceBound = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Request notification permissions for Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    NOTIFICATION_PERMISSION_CODE
-                )
-            }
+    // Service connection
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as TimerService.LocalBinder
+            timerService = binder.getService()
+            isServiceBound = true
         }
 
-        requestBatteryOptimizationExemption()
-
-        setupRecyclerView()
-        setupAddButton()
-        observeTimers()
+        override fun onServiceDisconnected(name: ComponentName?) {
+            isServiceBound = false
+        }
     }
 
+    // Private helper methods - UI Setup
+    private fun setupRecyclerView() {
+        binding.timerRecyclerView.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = this@MainActivity.adapter
+        }
+    }
+
+    private fun setupAddButton() {
+        binding.addTimerButton.setOnClickListener {
+            showAddTimerDialog()
+        }
+    }
+
+    private fun observeTimers() {
+        lifecycleScope.launch {
+            viewModel.timers.collect { timers ->
+                adapter.updateTimers(timers)
+            }
+        }
+    }
+
+    // Private helper methods - Service related
     private fun bindTimerService() {
         val serviceIntent = Intent(this, TimerService::class.java)
 
@@ -85,18 +94,6 @@ class MainActivity : AppCompatActivity() {
 
         // Then bind to it
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-    }
-
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as TimerService.LocalBinder
-            timerService = binder.getService()
-            isServiceBound = true
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            isServiceBound = false
-        }
     }
 
     private fun checkAndRequestNotificationPermission() {
@@ -127,84 +124,54 @@ class MainActivity : AppCompatActivity() {
         bindTimerService()
     }
 
-    // Improve the permission result handling
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == NOTIFICATION_PERMISSION_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, initialize service
-                initializeTimerService()
-            } else {
-                // Permission denied - inform user that timers may not function properly
-                Toast.makeText(
-                    this,
-                    "Timer notifications will not work without permission. Timers may stop in background.",
-                    Toast.LENGTH_LONG
-                ).show()
+    // Private helper methods - Battery optimization
+    private fun getManufacturerSpecificInstructions(): String? {
+        return when (Build.MANUFACTURER.lowercase()) {
+            "xiaomi", "redmi", "poco" -> "Go to Settings > Apps > Manage Apps > MultiTimer > Battery > No restrictions"
+            "huawei", "honor" -> "Go to Settings > Apps > MultiTimer > Battery > App launch"
+            "samsung" -> "Go to Settings > Apps > MultiTimer > Battery > Allow background activity"
+            "oppo", "oneplus", "realme" -> "Go to Settings > Battery > Background apps > MultiTimer"
+            else -> null
+        }
+    }
 
-                // Still initialize, but service will have limited functionality
-                initializeTimerService()
+    private fun requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+            val packageName = packageName
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                // Get manufacturer-specific instructions
+                val specificInstructions = getManufacturerSpecificInstructions()
+
+                // Create message with potential additional instructions
+                val message = "For timers to work properly when the screen is off, " +
+                        "please disable battery optimization for this app." +
+                        (specificInstructions?.let { "\n\nOn your device: $it" } ?: "")
+
+                // Show dialog with enhanced instructions
+                AlertDialog.Builder(this)
+                    .setTitle("Battery Optimization")
+                    .setMessage(message)
+                    .setPositiveButton("Settings") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            // Fallback to general battery settings
+                            Toast.makeText(this,
+                                "Please find MultiTimer in your battery settings and disable optimization",
+                                Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    .setNegativeButton("Later", null)
+                    .show()
             }
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        Intent(this, TimerService::class.java).also { intent ->
-            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(Intent(this, TimerService::class.java))
-        } else {
-            startService(Intent(this, TimerService::class.java))
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        // Don't unbind here if you want the service to continue in the background
-        // Only unbind if you want the service to stop when the app is not visible
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // Properly clean up service connection
-        if (isServiceBound) {
-            unbindService(serviceConnection)
-            isServiceBound = false
-        }
-    }
-
-    companion object {
-        private const val NOTIFICATION_PERMISSION_CODE = 100
-    }
-
-    private fun setupRecyclerView() {
-        binding.timerRecyclerView.apply {
-            layoutManager = LinearLayoutManager(this@MainActivity)
-            adapter = this@MainActivity.adapter
-        }
-    }
-
-    private fun setupAddButton() {
-        binding.addTimerButton.setOnClickListener {
-            showAddTimerDialog()
-        }
-    }
-
-    private fun observeTimers() {
-        lifecycleScope.launch {
-            viewModel.timers.collect { timers ->
-                adapter.updateTimers(timers)
-            }
-        }
-    }
-
+    // Private helper methods - Timer operations
     private fun handleStartPause(id: String) {
         val timer = viewModel.timers.value.find { it.id == id } ?: return
         if (timer.isRunning) {
@@ -219,7 +186,7 @@ class MainActivity : AppCompatActivity() {
             // Inflate the dialog view
             val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
 
-            // Get references to the UI components (fix typo in findViewById)
+            // Get references to the UI components
             val nameEditText = dialogView.findViewById<EditText>(R.id.timer_name_edit)
             val hoursValue = dialogView.findViewById<TextView>(R.id.hours_value)
             val minutesValue = dialogView.findViewById<TextView>(R.id.minutes_value)
@@ -252,7 +219,7 @@ class MainActivity : AppCompatActivity() {
                 updateDisplay()
             }
 
-// Set up minutes slider with SeekBar
+            // Set up minutes slider with SeekBar
             minutesSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(
                     seekBar: SeekBar?,
@@ -317,7 +284,7 @@ class MainActivity : AppCompatActivity() {
         // Inflate the dialog view
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_timer, null)
 
-        // Get references to the UI components (fixed typo in findViewById)
+        // Get references to the UI components
         val nameEditText = dialogView.findViewById<EditText>(R.id.timer_name_edit)
         val hoursValue = dialogView.findViewById<TextView>(R.id.hours_value)
         val minutesValue = dialogView.findViewById<TextView>(R.id.minutes_value)
@@ -396,6 +363,86 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // Activity lifecycle methods
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // Request notification permissions for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_CODE
+                )
+            }
+        }
+
+        requestBatteryOptimizationExemption()
+
+        setupRecyclerView()
+        setupAddButton()
+        observeTimers()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Intent(this, TimerService::class.java).also { intent ->
+            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(Intent(this, TimerService::class.java))
+        } else {
+            startService(Intent(this, TimerService::class.java))
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Don't unbind here if you want the service to continue in the background
+        // Only unbind if you want the service to stop when the app is not visible
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Properly clean up service connection
+        if (isServiceBound) {
+            unbindService(serviceConnection)
+            isServiceBound = false
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == NOTIFICATION_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, initialize service
+                initializeTimerService()
+            } else {
+                // Permission denied - inform user that timers may not function properly
+                Toast.makeText(
+                    this,
+                    "Timer notifications will not work without permission. Timers may stop in background.",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                // Still initialize, but service will have limited functionality
+                initializeTimerService()
+            }
+        }
+    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
         return true
@@ -413,53 +460,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // check and request battery optimization exemption
-    // app/src/main/java/com/pneumasoft/multitimer/MainActivity.kt
-// Update your existing method
-
-    private fun requestBatteryOptimizationExemption() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-            val packageName = packageName
-            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                // Get manufacturer-specific instructions
-                val specificInstructions = getManufacturerSpecificInstructions()
-
-                // Create message with potential additional instructions
-                val message = "For timers to work properly when the screen is off, " +
-                        "please disable battery optimization for this app." +
-                        (specificInstructions?.let { "\n\nOn your device: $it" } ?: "")
-
-                // Show dialog with enhanced instructions
-                AlertDialog.Builder(this)
-                    .setTitle("Battery Optimization")
-                    .setMessage(message)
-                    .setPositiveButton("Settings") { _, _ ->
-                        try {
-                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                data = Uri.parse("package:$packageName")
-                            }
-                            startActivity(intent)
-                        } catch (e: Exception) {
-                            // Fallback to general battery settings
-                            Toast.makeText(this,
-                                "Please find MultiTimer in your battery settings and disable optimization",
-                                Toast.LENGTH_LONG).show()
-                        }
-                    }
-                    .setNegativeButton("Later", null)
-                    .show()
-            }
-        }
-    }
-
-    private fun getManufacturerSpecificInstructions(): String? {
-        return when (Build.MANUFACTURER.lowercase()) {
-            "xiaomi", "redmi", "poco" -> "Go to Settings > Apps > Manage Apps > MultiTimer > Battery > No restrictions"
-            "huawei", "honor" -> "Go to Settings > Apps > MultiTimer > Battery > App launch"
-            "samsung" -> "Go to Settings > Apps > MultiTimer > Battery > Allow background activity"
-            "oppo", "oneplus", "realme" -> "Go to Settings > Battery > Background apps > MultiTimer"
-            else -> null
-        }
+    companion object {
+        private const val NOTIFICATION_PERMISSION_CODE = 100
     }
 }
