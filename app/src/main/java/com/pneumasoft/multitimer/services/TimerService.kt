@@ -1,5 +1,6 @@
 package com.pneumasoft.multitimer.services
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,15 +15,20 @@ import android.media.RingtoneManager
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.MainActivity
 import com.pneumasoft.multitimer.R
+import com.pneumasoft.multitimer.receivers.TimerAlarmReceiver
 import com.pneumasoft.multitimer.repository.TimerRepository
 
 class TimerService : Service() {
     private val binder = LocalBinder()
     private lateinit var repository: TimerRepository
+    private lateinit var alarmManager: AlarmManager
+    private val pendingIntents = HashMap<String, PendingIntent>()
+    private var wakeLock: PowerManager.WakeLock? = null
 
     inner class LocalBinder : Binder() {
         fun getService(): TimerService = this@TimerService
@@ -68,6 +74,16 @@ class TimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Acquire partial wake lock
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "MultiTimer::ServiceWakeLock"
+        )
+        wakeLock?.acquire()
+
+        alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         repository = TimerRepository(applicationContext)
         createNotificationChannel()
         createAlarmNotificationChannel() // Create the alarm channel
@@ -107,6 +123,15 @@ class TimerService : Service() {
     }
 
     override fun onDestroy() {
+
+        // Release wake lock when service is destroyed
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
+        wakeLock = null
+
         super.onDestroy()
         // Unregister timer completion receiver
         LocalBroadcastManager.getInstance(this).unregisterReceiver(timerCompletionReceiver)
@@ -237,6 +262,46 @@ class TimerService : Service() {
 
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(notificationId, notification)
+    }
+
+    // New method to schedule a timer using AlarmManager
+    fun scheduleTimer(timerId: String, timerName: String, durationMillis: Long) {
+        val triggerTime = System.currentTimeMillis() + durationMillis
+
+        // Create intent for alarm
+        val intent = Intent(this, TimerAlarmReceiver::class.java).apply {
+            action = TimerAlarmReceiver.ACTION_TIMER_COMPLETE
+            putExtra(TimerAlarmReceiver.EXTRA_TIMER_ID, timerId)
+            putExtra(TimerAlarmReceiver.EXTRA_TIMER_NAME, timerName)
+        }
+
+        // Create unique request code based on timer ID
+        val requestCode = timerId.hashCode()
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Store for cancellation
+        pendingIntents[timerId] = pendingIntent
+
+        // Use AlarmManager method that works in Doze mode
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
+        } else {
+            alarmManager.setExact(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
+        }
     }
 
     companion object {

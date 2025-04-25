@@ -1,6 +1,8 @@
 package com.pneumasoft.multitimer.viewmodel
 
 import android.app.Application
+import android.content.ComponentName
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import com.pneumasoft.multitimer.model.TimerItem
@@ -16,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.services.TimerService
 
@@ -105,7 +109,6 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startTimer(id: String) {
-        // Existing code from the original file remains the same
         val timer = _timers.value.find { it.id == id } ?: return
         if (timer.isRunning) return
 
@@ -113,6 +116,37 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
             if (it.id == id) it.copy(isRunning = true) else it
         }
         saveTimers()
+
+        // Get application context
+        val context = getApplication<Application>()
+
+        // If timer duration exceeds 1 minute, use AlarmManager for reliability
+        if (timer.remainingSeconds > 60) {
+            // Bind to service to access its methods
+            val serviceIntent = Intent(context, TimerService::class.java)
+            context.bindService(serviceIntent, object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                    val binder = service as TimerService.LocalBinder
+                    val timerService = binder.getService()
+
+                    // Schedule using AlarmManager
+                    timerService.scheduleTimer(
+                        timerId = timer.id,
+                        timerName = timer.name,
+                        durationMillis = timer.remainingSeconds * 1000L
+                    )
+
+                    context.unbindService(this)
+                }
+
+                override fun onServiceDisconnected(name: ComponentName?) {
+                    // Not needed
+                }
+            }, Context.BIND_AUTO_CREATE)
+        }
+
+        // Keep existing coroutine-based implementation for UI updates
+        // but make it stop once the alarm triggers
 
         val job = viewModelScope.launch {
             try {

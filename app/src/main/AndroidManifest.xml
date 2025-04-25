@@ -38,5 +38,10 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse|dataSync" />
+
+        <receiver
+            android:name=".receivers.TimerAlarmReceiver"
+            android:exported="false" />
+
     </application>
 </manifest>

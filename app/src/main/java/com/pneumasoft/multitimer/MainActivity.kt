@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import com.pneumasoft.multitimer.services.TimerService
 import android.widget.ImageButton
@@ -29,6 +30,8 @@ import android.widget.TextView
 import android.widget.SeekBar
 import android.view.Menu
 import android.view.MenuItem
+import android.provider.Settings
+import android.net.Uri
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -62,6 +65,8 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
+
+        requestBatteryOptimizationExemption()
 
         setupRecyclerView()
         setupAddButton()
@@ -338,7 +343,6 @@ class MainActivity : AppCompatActivity() {
             minutesValue.text = "$formattedMinutes minutes"
         }
 
-        // Set up hours controls
         hoursUpButton.setOnClickListener {
             hours = (hours + 1) % 24
             updateDisplay()
@@ -349,7 +353,6 @@ class MainActivity : AppCompatActivity() {
             updateDisplay()
         }
 
-// Set up minutes slider with SeekBar
         minutesSlider.progress = minutes
         minutesSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -409,4 +412,27 @@ class MainActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
     }
+
+    // check and request battery optimization exemption
+    private fun requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+            val packageName = packageName
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                // Show dialog explaining why this is needed
+                AlertDialog.Builder(this)
+                    .setTitle("Battery Optimization")
+                    .setMessage("For timers to work properly when the screen is off, please disable battery optimization for this app.")
+                    .setPositiveButton("Settings") { _, _ ->
+                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                    }
+                    .setNegativeButton("Later", null)
+                    .show()
+            }
+        }
+    }
+
 }
