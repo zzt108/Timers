@@ -1,6 +1,8 @@
 package com.pneumasoft.multitimer.viewmodel
 
 import android.app.Application
+import android.content.ComponentName
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import com.pneumasoft.multitimer.model.TimerItem
@@ -16,33 +18,34 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.services.TimerService
 
 class TimerViewModel(application: Application) : AndroidViewModel(application) {
+    // Properties
     private val repository = TimerRepository(application)
-
     private val _timers = MutableStateFlow<List<TimerItem>>(emptyList())
     val timers: StateFlow<List<TimerItem>> = _timers
-
     private val activeTimers = mutableMapOf<String, Job>()
+    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob() +
+            CoroutineExceptionHandler { _, exception ->
+                Log.e("TimerViewModel", "Coroutine error: ${exception.message}", exception)
+            })
 
-    // Add this method to your TimerViewModel class
+    // Initialization
+    init {
+        loadSavedTimers()
+    }
+
+    // Private methods
     private fun sendTimerCompletedBroadcast(id: String, name: String) {
         val intent = Intent(TimerService.TIMER_COMPLETED_ACTION).apply {
             putExtra(TimerService.EXTRA_TIMER_ID, id)
             putExtra(TimerService.EXTRA_TIMER_NAME, name)
         }
         LocalBroadcastManager.getInstance(getApplication()).sendBroadcast(intent)
-    }
-
-    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob() +
-            CoroutineExceptionHandler { _, exception ->
-                Log.e("TimerViewModel", "Coroutine error: ${exception.message}", exception)
-            })
-
-    init {
-        loadSavedTimers()
     }
 
     private fun loadSavedTimers() {
@@ -76,6 +79,43 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun stopTimer(id: String) {
+        // Cancel coroutine job
+        activeTimers[id]?.cancel()
+        activeTimers.remove(id)
+
+        // Update timer state
+        _timers.value = _timers.value.map {
+            if (it.id == id) it.copy(isRunning = false) else it
+        }
+
+        // Cancel the alarm in TimerService
+        cancelAlarmInService(id)
+    }
+
+    private fun cancelAlarmInService(timerId: String) {
+        val context = getApplication<Application>()
+        val serviceIntent = Intent(context, TimerService::class.java)
+
+        context.bindService(serviceIntent, object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                val binder = service as TimerService.LocalBinder
+                val timerService = binder.getService()
+
+                // Cancel the alarm for this timer
+                timerService.cancelTimer(timerId)
+
+                // Unbind from service
+                context.unbindService(this)
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                // Not needed
+            }
+        }, Context.BIND_AUTO_CREATE)
+    }
+
+    // Public methods
     fun addTimer(name: String, durationSeconds: Int) {
         val newTimer = TimerItem(
             name = name,
@@ -105,7 +145,6 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startTimer(id: String) {
-        // Existing code from the original file remains the same
         val timer = _timers.value.find { it.id == id } ?: return
         if (timer.isRunning) return
 
@@ -113,6 +152,37 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
             if (it.id == id) it.copy(isRunning = true) else it
         }
         saveTimers()
+
+        // Get application context
+        val context = getApplication<Application>()
+
+        // If timer duration exceeds 1 minute, use AlarmManager for reliability
+        if (timer.remainingSeconds > 60) {
+            // Bind to service to access its methods
+            val serviceIntent = Intent(context, TimerService::class.java)
+            context.bindService(serviceIntent, object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                    val binder = service as TimerService.LocalBinder
+                    val timerService = binder.getService()
+
+                    // Schedule using AlarmManager
+                    timerService.scheduleTimer(
+                        timerId = timer.id,
+                        timerName = timer.name,
+                        durationMillis = timer.remainingSeconds * 1000L
+                    )
+
+                    context.unbindService(this)
+                }
+
+                override fun onServiceDisconnected(name: ComponentName?) {
+                    // Not needed
+                }
+            }, Context.BIND_AUTO_CREATE)
+        }
+
+        // Keep existing coroutine-based implementation for UI updates
+        // but make it stop once the alarm triggers
 
         val job = viewModelScope.launch {
             try {
@@ -179,14 +249,6 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         stopTimer(id)
         _timers.value = _timers.value.filterNot { it.id == id }
         saveTimers()
-    }
-
-    private fun stopTimer(id: String) {
-        activeTimers[id]?.cancel()
-        activeTimers.remove(id)
-        _timers.value = _timers.value.map {
-            if (it.id == id) it.copy(isRunning = false) else it
-        }
     }
 
     override fun onCleared() {
