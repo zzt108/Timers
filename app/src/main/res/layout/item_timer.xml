@@ -1,101 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_margin="4dp"
     app:cardCornerRadius="8dp"
-    app:cardElevation="4dp">
+    app:cardElevation="2dp">
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:padding="4dp">
+
+        <!-- Progress Button (Left) -->
+        <FrameLayout
+            android:id="@+id/progress_container"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ProgressBar
+                android:id="@+id/seconds_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:indeterminate="false"
+                android:max="60"
+                android:progress="0"
+                android:progressDrawable="@drawable/circular_progress" />
+
+            <ImageButton
+                android:id="@+id/start_pause_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Start/pause"
+                android:src="@drawable/ic_play" />
+        </FrameLayout>
+
+        <!-- Time Display (Center) -->
+        <TextView
+            android:id="@+id/timer_display"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="20sp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            app:layout_constraintStart_toEndOf="@id/progress_container"
+            app:layout_constraintEnd_toStartOf="@id/timer_controls"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+        <!-- Control Buttons (Right) -->
+        <LinearLayout
+            android:id="@+id/timer_controls"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ImageButton
+                android:id="@+id/reset_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Reset"
+                android:src="@drawable/ic_reset" />
+
+            <ImageButton
+                android:id="@+id/edit_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Edit"
+                android:src="@drawable/ic_edit" />
+
+            <ImageButton
+                android:id="@+id/delete_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Delete"
+                android:src="@drawable/ic_delete" />
+        </LinearLayout>
+
+        <!-- Timer Name (Bottom) -->
         <TextView
             android:id="@+id/timer_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textSize="18sp"
             android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@+id/timer_controls"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            app:layout_constraintEnd_toStartOf="@+id/timer_controls"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/timer_name">
-            <TextView
-                android:id="@+id/timer_display"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="24sp"
-                android:layout_marginEnd="16dp" />
+            android:ellipsize="end"
+            android:maxLines="1"
+            app:layout_constraintStart_toStartOf="@id/progress_container"
+            app:layout_constraintEnd_toEndOf="@id/timer_controls"
+            app:layout_constraintTop_toBottomOf="@id/progress_container"
+            app:layout_constraintBottom_toBottomOf="parent"/>
 
-            <!-- FrameLayout to stack progress bar and button -->
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center">
-
-                <ProgressBar
-                    android:id="@+id/seconds_progress"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:indeterminate="false"
-                    android:max="60"
-                    android:progress="0"
-                    android:progressDrawable="@drawable/circular_progress" />
-
-                <ImageButton
-                    android:id="@+id/start_pause_button"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_gravity="center"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Start or pause timer"
-                    android:src="@drawable/ic_play" />
-            </FrameLayout>
-        </LinearLayout>
-        <LinearLayout
-            android:id="@+id/timer_controls"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-            <ImageButton
-                android:id="@+id/reset_button"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:padding="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Reset timer"
-                android:src="@drawable/ic_reset" />
-            <ImageButton
-                android:id="@+id/edit_button"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:padding="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Edit timer"
-                android:src="@drawable/ic_edit" />
-            <ImageButton
-                android:id="@+id/delete_button"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:padding="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Delete timer"
-                android:src="@drawable/ic_delete" />
-        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>
