@@ -27,6 +27,8 @@ import com.pneumasoft.multitimer.services.TimerService
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.SeekBar
+import android.view.Menu
+import android.view.MenuItem
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -269,7 +271,7 @@ class MainActivity : AppCompatActivity() {
             builder.setView(dialogView)
             builder.setPositiveButton("Add") { _, _ ->
                 val name = nameEditText.text.toString()
-                val totalSeconds = hours * 3600 + minutes * 60
+                val totalSeconds = hours * 3600 + minutes * 60 + 15 // for testing purposes add 10 secs
 
                 if (totalSeconds > 0) {
                     if (name.isBlank()) {
@@ -389,5 +391,22 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_about -> {
+                // Create an Intent to navigate to AboutActivity
+                val intent = Intent(this, AboutActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 }

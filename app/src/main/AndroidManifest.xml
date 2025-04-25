@@ -29,6 +29,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false" />
+
         <service
             android:name="com.pneumasoft.multitimer.services.TimerService"
             android:enabled="true"
