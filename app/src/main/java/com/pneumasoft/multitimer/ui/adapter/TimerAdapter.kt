@@ -13,7 +13,6 @@ class TimerAdapter(
     private val onEditClick: (String) -> Unit,
     private val onDeleteClick: (String) -> Unit
 ) : RecyclerView.Adapter<TimerAdapter.TimerViewHolder>() {
-
     class TimerViewHolder(val binding: ItemTimerBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TimerViewHolder {
@@ -33,12 +32,16 @@ class TimerAdapter(
 
             // Calculate seconds for the progress indicator
             val secondsValue = timer.remainingSeconds % 60
+
             // Set the progress on the actual ProgressBar view
             secondsProgress.progress = secondsValue
 
+            // Update button icon based on timer state
             startPauseButton.setImageResource(
                 if (timer.isRunning) R.drawable.ic_pause else R.drawable.ic_play
             )
+
+            // Set click listeners
             startPauseButton.setOnClickListener { onStartPauseClick(timer.id) }
             resetButton.setOnClickListener { onResetClick(timer.id) }
             editButton.setOnClickListener { onEditClick(timer.id) }
@@ -60,7 +63,6 @@ class TimerAdapter(
     fun updateTimers(newTimers: List<TimerItem>) {
         val oldTimers = timers
         this.timers = newTimers
-
         // Use DiffUtil to calculate the differences
         val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
             override fun getOldListSize() = oldTimers.size
@@ -76,7 +78,6 @@ class TimerAdapter(
                         old.isRunning == new.isRunning
             }
         })
-
         // Dispatch updates
         diffResult.dispatchUpdatesTo(this)
     }
