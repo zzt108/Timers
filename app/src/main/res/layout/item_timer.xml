@@ -13,9 +13,11 @@
 
     <TextView
         android:id="@+id/timer_expiration_time"
-        android:layout_width="108dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
+        android:textAlignment="textEnd"
         android:textColor="#757575"
         android:textSize="12sp"
         android:textStyle="italic"
@@ -26,19 +28,19 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="0dp"
-        android:paddingBottom="2dp"
         android:paddingStart="4dp"
-        android:paddingEnd="4dp">
+        android:paddingTop="0dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="2dp">
 
         <!-- Progress Button (Left) -->
         <FrameLayout
             android:id="@+id/progress_container"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintTop_toTopOf="parent">
 
 
             <ProgressBar
@@ -66,50 +68,50 @@
             android:id="@+id/timer_display"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textSize="20sp"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
-            app:layout_constraintStart_toEndOf="@id/progress_container"
+            android:textSize="20sp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/timer_controls"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            app:layout_constraintStart_toEndOf="@id/progress_container"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!-- Control Buttons (Right) -->
         <LinearLayout
             android:id="@+id/timer_controls"
             android:layout_width="wrap_content"
             android:layout_height="32dp"
-            android:orientation="horizontal"
             android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintTop_toTopOf="parent">
 
             <ImageButton
                 android:id="@+id/reset_button"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:padding="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Reset"
+                android:padding="4dp"
                 android:src="@drawable/ic_reset" />
 
             <ImageButton
                 android:id="@+id/edit_button"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:padding="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Edit"
+                android:padding="4dp"
                 android:src="@drawable/ic_edit" />
 
             <ImageButton
                 android:id="@+id/delete_button"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:padding="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Delete"
+                android:padding="4dp"
                 android:src="@drawable/ic_delete" />
         </LinearLayout>
 
@@ -118,14 +120,15 @@
             android:id="@+id/timer_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:textStyle="bold"
             android:ellipsize="end"
             android:maxLines="1"
-            app:layout_constraintStart_toStartOf="@id/progress_container"
+            android:textAlignment="center"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="@id/timer_controls"
-            app:layout_constraintTop_toBottomOf="@id/progress_container"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            app:layout_constraintStart_toStartOf="@id/progress_container"
+            app:layout_constraintTop_toBottomOf="@id/progress_container" />
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>
