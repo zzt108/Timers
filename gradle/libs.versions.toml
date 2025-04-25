@@ -10,13 +10,15 @@ lifecycleRuntimeKtx = "2.6.1"
 activityCompose = "1.8.0"
 composeBom = "2024.09.00"
 appcompat = "1.6.1"
+localbroadcastmanager = "1.1.0"
 material = "1.10.0"
 activity = "1.8.0"
 constraintlayout = "2.1.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.16.0" }
-gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+androidx-localbroadcastmanager = { module = "androidx.localbroadcastmanager:localbroadcastmanager", version.ref = "localbroadcastmanager" }
+google-gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version = "1.2.1" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version = "3.6.1" }

@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import android.content.Intent
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.pneumasoft.multitimer.services.TimerService
 
 class TimerViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = TimerRepository(application)
@@ -23,6 +26,16 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     val timers: StateFlow<List<TimerItem>> = _timers
 
     private val activeTimers = mutableMapOf<String, Job>()
+
+    // Add this method to your TimerViewModel class
+    private fun sendTimerCompletedBroadcast(id: String, name: String) {
+        val intent = Intent(TimerService.TIMER_COMPLETED_ACTION).apply {
+            putExtra(TimerService.EXTRA_TIMER_ID, id)
+            putExtra(TimerService.EXTRA_TIMER_NAME, name)
+        }
+        LocalBroadcastManager.getInstance(getApplication()).sendBroadcast(intent)
+    }
+
     private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob() +
             CoroutineExceptionHandler { _, exception ->
                 Log.e("TimerViewModel", "Coroutine error: ${exception.message}", exception)
@@ -119,6 +132,9 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
                         _timers.value = _timers.value.map {
                             if (it.id == id) {
                                 val newRemaining = it.remainingSeconds - 1
+                                if (newRemaining <= 0) {
+                                    sendTimerCompletedBroadcast(id, it.name)
+                                }
                                 it.copy(
                                     remainingSeconds = newRemaining,
                                     isRunning = newRemaining > 0,
