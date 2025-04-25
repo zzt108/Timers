@@ -216,11 +216,39 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun stopTimer(id: String) {
+        // Cancel coroutine job
         activeTimers[id]?.cancel()
         activeTimers.remove(id)
+
+        // Update timer state
         _timers.value = _timers.value.map {
             if (it.id == id) it.copy(isRunning = false) else it
         }
+
+        // Cancel the alarm in TimerService
+        cancelAlarmInService(id)
+    }
+
+    private fun cancelAlarmInService(timerId: String) {
+        val context = getApplication<Application>()
+        val serviceIntent = Intent(context, TimerService::class.java)
+
+        context.bindService(serviceIntent, object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                val binder = service as TimerService.LocalBinder
+                val timerService = binder.getService()
+
+                // Cancel the alarm for this timer
+                timerService.cancelTimer(timerId)
+
+                // Unbind from service
+                context.unbindService(this)
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                // Not needed
+            }
+        }, Context.BIND_AUTO_CREATE)
     }
 
     override fun onCleared() {

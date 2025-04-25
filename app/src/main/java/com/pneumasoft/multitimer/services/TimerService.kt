@@ -16,6 +16,7 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.MainActivity
@@ -289,18 +290,34 @@ class TimerService : Service() {
         pendingIntents[timerId] = pendingIntent
 
         // Use AlarmManager method that works in Doze mode
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerTime,
-                pendingIntent
-            )
-        } else {
-            alarmManager.setExact(
-                AlarmManager.RTC_WAKEUP,
-                triggerTime,
-                pendingIntent
-            )
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("TimerService", "Failed to schedule alarm", e)
+        }
+    }
+
+    fun cancelTimer(timerId: String) {
+        try {
+            pendingIntents[timerId]?.let { pendingIntent ->
+                alarmManager.cancel(pendingIntent)
+                pendingIntents.remove(timerId)
+                Log.d("TimerService", "Alarm canceled for timer $timerId")
+            }
+        } catch (e: Exception) {
+            Log.e("TimerService", "Failed to cancel alarm for timer $timerId", e)
         }
     }
 
