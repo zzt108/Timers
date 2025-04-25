@@ -64,6 +64,10 @@ class MainActivity : AppCompatActivity() {
         binding.timerRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = this@MainActivity.adapter
+            // Remove any existing item decorations if present
+            if (itemDecorationCount > 0) {
+                removeItemDecorationAt(0)
+            }
         }
     }
 
