@@ -414,28 +414,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     // check and request battery optimization exemption
+    // app/src/main/java/com/pneumasoft/multitimer/MainActivity.kt
+// Update your existing method
+
     private fun requestBatteryOptimizationExemption() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = getSystemService(POWER_SERVICE) as PowerManager
             val packageName = packageName
             if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                try {
-                    // Try the direct approach first
-                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                        data = Uri.parse("package:$packageName")
+                // Get manufacturer-specific instructions
+                val specificInstructions = getManufacturerSpecificInstructions()
+
+                // Create message with potential additional instructions
+                val message = "For timers to work properly when the screen is off, " +
+                        "please disable battery optimization for this app." +
+                        (specificInstructions?.let { "\n\nOn your device: $it" } ?: "")
+
+                // Show dialog with enhanced instructions
+                AlertDialog.Builder(this)
+                    .setTitle("Battery Optimization")
+                    .setMessage(message)
+                    .setPositiveButton("Settings") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            // Fallback to general battery settings
+                            Toast.makeText(this,
+                                "Please find MultiTimer in your battery settings and disable optimization",
+                                Toast.LENGTH_LONG).show()
+                        }
                     }
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    // Fallback to general battery optimization settings
-                    try {
-                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                        startActivity(intent)
-                        Toast.makeText(this, "Please find and select MultiTimer in the list", Toast.LENGTH_LONG).show()
-                    } catch (e: Exception) {
-                        // Last resort - general settings
-                        Toast.makeText(this, "Please manually disable battery optimization for this app in Settings", Toast.LENGTH_LONG).show()
-                    }
-                }
+                    .setNegativeButton("Later", null)
+                    .show()
             }
         }
     }
