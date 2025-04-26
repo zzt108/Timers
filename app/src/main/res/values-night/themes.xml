@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MultiTimer" parent="Theme.AppCompat.DayNight.DarkActionBar">
+        <!-- Dark theme colors -->
+        <item name="colorPrimary">@color/purple_200</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        <!-- Additional dark theme attributes -->
+        <item name="android:windowBackground">@color/dark_background</item>
+    </style>
+</resources>

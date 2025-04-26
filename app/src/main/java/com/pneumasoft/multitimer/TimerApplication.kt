@@ -50,23 +50,15 @@ class TimerApplication : Application() {
     }
 
     private fun ApllySavedThemePreference(){
-        // Apply saved theme preference
+        // Apply the saved theme preference
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val darkMode = prefs.getString("dark_mode", "system") ?: "system"
-
-        val mode = when (darkMode) {
+        val themeMode = when (prefs.getString("theme_mode", "system")) {
             "light" -> AppCompatDelegate.MODE_NIGHT_NO
             "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-            else -> {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                    AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                } else {
-                    AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY
-                }
-            }
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
-        AppCompatDelegate.setDefaultNightMode(mode)
 
+        AppCompatDelegate.setDefaultNightMode(themeMode)
     }
 
     private fun saveTimerStates(throwable: Throwable) {
