@@ -44,6 +44,7 @@ class TimerAlarmReceiver : BroadcastReceiver() {
                     .sendBroadcast(Intent(TimerService.TIMER_COMPLETED_ACTION).apply {
                         putExtra(TimerService.EXTRA_TIMER_ID, timerId)
                         putExtra(TimerService.EXTRA_TIMER_NAME, timerName)
+                        putExtra("SKIP_NOTIFICATION", true) // Add this flag
                     })
             }
         } finally {
