@@ -62,3 +62,4 @@ captures/
 # OS specific files
 .DS_Store
 Thumbs.db
+/app/debug/output-metadata.json

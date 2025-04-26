@@ -1,10 +1,14 @@
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.pneumasoft.multitimer.R
 import com.pneumasoft.multitimer.databinding.ItemTimerBinding
 import com.pneumasoft.multitimer.model.TimerItem
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class TimerAdapter(
     private var timers: List<TimerItem> = emptyList(),
@@ -13,7 +17,6 @@ class TimerAdapter(
     private val onEditClick: (String) -> Unit,
     private val onDeleteClick: (String) -> Unit
 ) : RecyclerView.Adapter<TimerAdapter.TimerViewHolder>() {
-
     class TimerViewHolder(val binding: ItemTimerBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TimerViewHolder {
@@ -33,17 +36,38 @@ class TimerAdapter(
 
             // Calculate seconds for the progress indicator
             val secondsValue = timer.remainingSeconds % 60
+
             // Set the progress on the actual ProgressBar view
             secondsProgress.progress = secondsValue
 
+            // Update button icon based on timer state
             startPauseButton.setImageResource(
                 if (timer.isRunning) R.drawable.ic_pause else R.drawable.ic_play
             )
+
+            // Calculate and display expiration time
+            if (timer.isRunning) {
+                val expirationTimeText = calculateExpirationTime(timer.remainingSeconds)
+                timerExpirationTime.text = expirationTimeText
+                timerExpirationTime.visibility = View.VISIBLE
+            } else {
+                timerExpirationTime.visibility = View.GONE
+            }
+
+            // Set click listeners
             startPauseButton.setOnClickListener { onStartPauseClick(timer.id) }
             resetButton.setOnClickListener { onResetClick(timer.id) }
             editButton.setOnClickListener { onEditClick(timer.id) }
             deleteButton.setOnClickListener { onDeleteClick(timer.id) }
         }
+    }
+
+    private fun calculateExpirationTime(remainingSeconds: Int): String {
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.SECOND, remainingSeconds)
+
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        return formatter.format(calendar.time)
     }
 
     // Format time to show only hours and minutes (no seconds)
@@ -60,7 +84,6 @@ class TimerAdapter(
     fun updateTimers(newTimers: List<TimerItem>) {
         val oldTimers = timers
         this.timers = newTimers
-
         // Use DiffUtil to calculate the differences
         val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
             override fun getOldListSize() = oldTimers.size
@@ -76,7 +99,6 @@ class TimerAdapter(
                         old.isRunning == new.isRunning
             }
         })
-
         // Dispatch updates
         diffResult.dispatchUpdatesTo(this)
     }
