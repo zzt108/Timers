@@ -39,6 +39,11 @@ class TimerService : Service() {
     private val timerCompletionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == TIMER_COMPLETED_ACTION) {
+                // Skip notification if flag is present
+                if (intent.getBooleanExtra("SKIP_NOTIFICATION", false)) {
+                    return
+                }
+
                 val timerId = intent.getStringExtra(EXTRA_TIMER_ID) ?: return
                 val timerName = intent.getStringExtra(EXTRA_TIMER_NAME) ?: return
 
