@@ -22,7 +22,7 @@
         android:theme="@style/Theme.MultiTimer"
         tools:targetApi="31">
         <activity
-            android:name="com.pneumasoft.multitimer.MainActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.MultiTimer">
             <intent-filter>
@@ -33,10 +33,17 @@
 
         <activity
             android:name=".AboutActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:parentActivityName=".MainActivity"/>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:label="Settings"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"/>
 
         <service
-            android:name="com.pneumasoft.multitimer.services.TimerService"
+            android:name=".services.TimerService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse|dataSync" />

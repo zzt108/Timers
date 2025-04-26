@@ -74,4 +74,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.google.gson)
     implementation(libs.androidx.localbroadcastmanager)
+    implementation(libs.androidx.preference.ktx)
 }

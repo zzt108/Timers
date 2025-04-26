@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import android.util.Log
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.preference.PreferenceManager
 
 class TimerApplication : Application() {
     override fun onCreate() {
@@ -43,6 +45,20 @@ class TimerApplication : Application() {
             // Save active timer states for potential recovery
             saveTimerStates(throwable)
         }
+
+        ApllySavedThemePreference()
+    }
+
+    private fun ApllySavedThemePreference(){
+        // Apply the saved theme preference
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val themeMode = when (prefs.getString("theme_mode", "system")) {
+            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+
+        AppCompatDelegate.setDefaultNightMode(themeMode)
     }
 
     private fun saveTimerStates(throwable: Throwable) {
