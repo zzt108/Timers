@@ -175,8 +175,16 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         val timer = _timers.value.find { it.id == id } ?: return
         if (timer.isRunning) return
 
+        // Calculate absolute end time
+        val endTimeMillis = System.currentTimeMillis() + (timer.remainingSeconds * 1000L)
+
         _timers.value = _timers.value.map {
-            if (it.id == id) it.copy(isRunning = true) else it
+            if (it.id == id) {
+                it.copy(
+                    isRunning = true,
+                    absoluteEndTimeMillis = endTimeMillis
+                )
+            } else it
         }
         saveTimers()
 
@@ -192,11 +200,11 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
                     val binder = service as TimerService.LocalBinder
                     val timerService = binder.getService()
 
-                    // Schedule using AlarmManager
+                    // Schedule using AlarmManager with absolute end time
                     timerService.scheduleTimer(
                         timerId = timer.id,
                         timerName = timer.name,
-                        durationMillis = timer.remainingSeconds * 1000L
+                        triggerAtMillis = endTimeMillis
                     )
 
                     context.unbindService(this)
@@ -208,45 +216,48 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
             }, Context.BIND_AUTO_CREATE)
         }
 
-        // Keep existing coroutine-based implementation for UI updates
-        // but make it stop once the alarm triggers
-
+        // Coroutine-based UI updates using absolute time calculation
         val job = viewModelScope.launch {
             try {
-                val startTime = System.currentTimeMillis()
-                var lastTickTime = startTime
-
                 while (isActive) {
+                    val currentTimer = _timers.value.find { it.id == id } ?: break
+                    val endTime = currentTimer.absoluteEndTimeMillis ?: break
+
+                    // Calculate remaining time from absolute end time
                     val now = System.currentTimeMillis()
-                    val elapsedSinceLastTick = now - lastTickTime
+                    val remainingMillis = endTime - now
+                    val remainingSeconds = (remainingMillis / 1000).toInt().coerceAtLeast(0)
 
-                    if (elapsedSinceLastTick >= 1000) {
-                        lastTickTime = now
-
-                        val currentTimer = _timers.value.find { it.id == id } ?: break
-                        if (currentTimer.remainingSeconds <= 0) break
-
+                    if (remainingSeconds <= 0) {
+                        // Timer completed
+                        sendTimerCompletedBroadcast(id, currentTimer.name)
                         _timers.value = _timers.value.map {
                             if (it.id == id) {
-                                val newRemaining = it.remainingSeconds - 1
-                                if (newRemaining <= 0) {
-                                    sendTimerCompletedBroadcast(id, it.name)
-                                }
                                 it.copy(
-                                    remainingSeconds = newRemaining,
-                                    isRunning = newRemaining > 0,
-                                    completionTimestamp = if (newRemaining <= 0) System.currentTimeMillis() else null
+                                    remainingSeconds = 0,
+                                    isRunning = false,
+                                    completionTimestamp = System.currentTimeMillis(),
+                                    absoluteEndTimeMillis = null
                                 )
                             } else it
                         }
                         saveTimers()
+                        break
                     }
-                    delay(100)
+
+                    // Update remaining time
+                    _timers.value = _timers.value.map {
+                        if (it.id == id) {
+                            it.copy(remainingSeconds = remainingSeconds)
+                        } else it
+                    }
+
+                    delay(1000) // Now 1 sec delay is OK, because we always recalculate
                 }
             } catch (e: Exception) {
                 Log.e("TimerViewModel", "Timer error: ${e.message}", e)
                 _timers.value = _timers.value.map {
-                    if (it.id == id) it.copy(isRunning = false) else it
+                    if (it.id == id) it.copy(isRunning = false, absoluteEndTimeMillis = null) else it
                 }
                 saveTimers()
             }

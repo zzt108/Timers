@@ -16,8 +16,8 @@ android {
         applicationId = "com.pneumasoft.multitimer"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1 Step 5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -49,6 +49,7 @@ android {
         compose = true
         viewBinding = true
         // dataBinding = true
+        buildConfig = true
     }
 }
 

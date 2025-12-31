@@ -200,17 +200,16 @@ class TimerService : Service() {
 
     // Public methods
 
-    fun scheduleTimer(timerId: String, timerName: String, durationMillis: Long) {
-        val triggerTime = System.currentTimeMillis() + durationMillis
+    fun scheduleTimer(timerId: String, timerName: String, triggerAtMillis: Long) {
+        val now = System.currentTimeMillis()
+        val triggerTime = maxOf(triggerAtMillis, now)
 
-        // Create intent for alarm
         val intent = Intent(this, TimerAlarmReceiver::class.java).apply {
             action = TimerAlarmReceiver.ACTION_TIMER_COMPLETE
             putExtra(TimerAlarmReceiver.EXTRA_TIMER_ID, timerId)
             putExtra(TimerAlarmReceiver.EXTRA_TIMER_NAME, timerName)
         }
 
-        // Create unique request code based on timer ID
         val requestCode = timerId.hashCode()
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -220,24 +219,50 @@ class TimerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Store for cancellation
         pendingIntents[timerId] = pendingIntent
 
-        // Use AlarmManager method that works in Doze mode
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // API 31+ (Android 12+): Ellenőrizni kell a jogosultságot
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTime,
+                        pendingIntent
+                    )
+                } else {
+                    // FALLBACK: Ha nincs meg a jog, használjunk nem-pontos alarmot vagy logoljunk
+                    // Jobb megoldás: setExact helyett setAndAllowWhileIdle (ami kevésbé pontos, de nem dob kivételt),
+                    // VAGY értesítsük a felhasználót (de ez service-ben nehéz).
+                    // Most a crash elkerülése a cél:
+                    Log.w("TimerService", "Exact alarm permission missing, falling back to inexact alarm")
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerTime,
+                        pendingIntent
+                    )
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // API 23-30: setExactAndAllowWhileIdle szabadon hívható (Doze mód miatt kell)
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerTime,
                     pendingIntent
                 )
             } else {
+                // API < 23: setExact
                 alarmManager.setExact(
                     AlarmManager.RTC_WAKEUP,
                     triggerTime,
                     pendingIntent
                 )
             }
+        } catch (e: SecurityException) {
+            // Ez a catch blokk fogja meg, ha valamiért mégis SecurityException jönne
+            Log.e("TimerService", "SecurityException scheduling alarm: ${e.message}")
+            // Fallback: sima set (nem exact)
+            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+
         } catch (e: Exception) {
             Log.e("TimerService", "Failed to schedule alarm", e)
         }

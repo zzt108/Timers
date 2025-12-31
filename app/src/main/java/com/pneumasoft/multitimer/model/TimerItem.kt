@@ -8,5 +8,6 @@ data class TimerItem(
     val durationSeconds: Int,
     var remainingSeconds: Int,
     var isRunning: Boolean = false,
-    var completionTimestamp: Long? = null
+    var completionTimestamp: Long? = null,
+    var absoluteEndTimeMillis: Long? = null
 )

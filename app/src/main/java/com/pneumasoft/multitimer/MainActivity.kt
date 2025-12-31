@@ -32,6 +32,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.provider.Settings
 import android.net.Uri
+import android.app.AlarmManager
 
 class MainActivity : AppCompatActivity() {
     // Properties
@@ -177,6 +178,30 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun checkAndRequestExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
+                AlertDialog.Builder(this)
+                    .setTitle("Exact Alarm Permission")
+                    .setMessage("Timers require exact alarm permission to function accurately. Please grant this permission in Settings.")
+                    .setPositiveButton("Settings") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "Failed to open alarm settings", e)
+                        }
+                    }
+                    .setNegativeButton("Later", null)
+                    .show()
+            }
+        }
+    }
+
 
     // Private helper methods - Timer operations
     private fun handleStartPause(id: String) {
