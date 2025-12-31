@@ -92,8 +92,9 @@ class TimerService : Service() {
             }
             TimerAlarmReceiver.ACTION_SNOOZE_TIMER -> {
                 val timerId = intent.getStringExtra(EXTRA_TIMER_ID)
+                val durationSec = intent.getLongExtra(TimerAlarmReceiver.EXTRA_SNOOZE_DURATION, 300L)
                 if (timerId != null) {
-                    snoozeTimer(timerId)
+                    snoozeTimer(timerId, durationSec) // Hívjuk az új szignatúrával
                 }
             }
         }
@@ -153,14 +154,13 @@ class TimerService : Service() {
         notificationHelper.cancelNotification(timerId.hashCode())
     }
 
-    private fun snoozeTimer(timerId: String) {
-        stopAlarm(timerId)
-        // Find timer name needed for rescheduling
+    private fun snoozeTimer(timerId: String, durationSeconds: Long) {
+        stopAlarm(timerId) // Hang leállítása (Step 7 fix)
+
         val timer = repository.loadTimers().find { it.id == timerId }
         if (timer != null) {
-            // Schedule +5 minutes
-            val newTrigger = System.currentTimeMillis() + (5 * 60 * 1000L)
+            // Schedule +durationSeconds
+            val newTrigger = System.currentTimeMillis() + (durationSeconds * 1000L)
             alarmScheduler.scheduleTimer(timerId, timer.name, newTrigger)
         }
-    }
-}
+    }}

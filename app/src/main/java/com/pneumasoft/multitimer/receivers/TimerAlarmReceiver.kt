@@ -82,5 +82,6 @@ class TimerAlarmReceiver : BroadcastReceiver() {
         const val ACTION_SNOOZE_TIMER = "com.pneumasoft.multitimer.ACTION_SNOOZE_TIMER"
         const val EXTRA_TIMER_ID = "timer_id"
         const val EXTRA_TIMER_NAME = "timer_name"
+        const val EXTRA_SNOOZE_DURATION = "snooze_duration"
     }
 }

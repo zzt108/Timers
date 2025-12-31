@@ -112,43 +112,59 @@ class TimerNotificationHelper(
     }
 
     // Step 7: Alarm Notification with Action Buttons
+// ... imports (add androidx.preference.PreferenceManager) ...
+
     fun showTimerCompletionNotification(timerId: String, timerName: String) {
-        // Dismiss Intent
+        // 1. Beállítások kiolvasása
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+        val shortSnoozeSec = prefs.getString("snooze_short_duration", "30")?.toLong() ?: 30L
+        val longSnoozeSec = prefs.getString("snooze_long_duration", "60")?.toLong() ?: 60L
+
+        // 2. Szövegek generálása (pl. "Snooze 30s", "Snooze 1m")
+        val shortLabel = formatSnoozeLabel(shortSnoozeSec)
+        val longLabel = formatSnoozeLabel(longSnoozeSec)
+
+        // 3. Intents
+        // 1. Dismiss Intent (Egyszerű)
         val dismissIntent = Intent(context, TimerAlarmReceiver::class.java).apply {
             action = TimerAlarmReceiver.ACTION_DISMISS_ALARM
             putExtra(TimerAlarmReceiver.EXTRA_TIMER_ID, timerId)
         }
         val dismissPendingIntent = PendingIntent.getBroadcast(
-            context,
-            timerId.hashCode(),
-            dismissIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            context, timerId.hashCode(), dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Snooze Intent
-        val snoozeIntent = Intent(context, TimerAlarmReceiver::class.java).apply {
+        // 2. Short Snooze Intent (Extra paraméterrel)
+        val shortSnoozeIntent = Intent(context, TimerAlarmReceiver::class.java).apply {
             action = TimerAlarmReceiver.ACTION_SNOOZE_ALARM
             putExtra(TimerAlarmReceiver.EXTRA_TIMER_ID, timerId)
+            // ITT a hiba javítása: TimerAlarmReceiver.EXTRA_SNOOZE_DURATION
+            putExtra(TimerAlarmReceiver.EXTRA_SNOOZE_DURATION, shortSnoozeSec)
         }
-        val snoozePendingIntent = PendingIntent.getBroadcast(
-            context,
-            timerId.hashCode() + 1,
-            snoozeIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val shortSnoozePendingIntent = PendingIntent.getBroadcast(
+            context, timerId.hashCode() + 1, shortSnoozeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Full Screen Intent
+        // 3. Long Snooze Intent
+        val longSnoozeIntent = Intent(context, TimerAlarmReceiver::class.java).apply {
+            action = TimerAlarmReceiver.ACTION_SNOOZE_ALARM
+            putExtra(TimerAlarmReceiver.EXTRA_TIMER_ID, timerId)
+            putExtra(TimerAlarmReceiver.EXTRA_SNOOZE_DURATION, longSnoozeSec)
+        }
+        val longSnoozePendingIntent = PendingIntent.getBroadcast(
+            context, timerId.hashCode() + 2, longSnoozeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Full Screen Intent (marad a régi)
         val fullScreenIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra(TimerAlarmReceiver.EXTRA_TIMER_ID, timerId)
         }
         val fullScreenPendingIntent = PendingIntent.getActivity(
-            context,
-            timerId.hashCode() + 2,
-            fullScreenIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            context, timerId.hashCode() + 10, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // 4. Notification Build
         val notification = NotificationCompat.Builder(context, ALARM_CHANNEL_ID)
             .setContentTitle("Timer Complete!")
             .setContentText(timerName)
@@ -158,14 +174,39 @@ class TimerNotificationHelper(
             .setAutoCancel(false)
             .setOngoing(true)
             .setFullScreenIntent(fullScreenPendingIntent, true)
-            // Add Action Buttons
+            // Három gomb:
             .addAction(R.drawable.ic_close, "Dismiss", dismissPendingIntent)
-            .addAction(R.drawable.ic_snooze, "Snooze 5 min", snoozePendingIntent)
+            .addAction(R.drawable.ic_snooze, shortLabel, shortSnoozePendingIntent)
+            .addAction(R.drawable.ic_snooze, longLabel, longSnoozePendingIntent)
+            // Hang és vibrálás
             .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
             .setVibrate(longArrayOf(0, 1000, 1000, 1000))
             .build()
 
         notificationManager.notify(timerId.hashCode(), notification)
+    }
+
+    // Helper a PendingIntent létrehozáshoz (DRY)
+    private fun createActionIntent(timerId: String, actionStr: String, reqCodeOffset: Int): PendingIntent {
+        val intent = Intent(context, TimerAlarmReceiver::class.java).apply {
+            action = actionStr
+            putExtra(TimerAlarmReceiver.EXTRA_TIMER_ID, timerId)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            timerId.hashCode() + reqCodeOffset,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE // Update current fontos az extra miatt!
+        )
+    }
+
+    // Helper a címkéhez
+    private fun formatSnoozeLabel(seconds: Long): String {
+        return if (seconds >= 60) {
+            "Snooze ${seconds / 60}m"
+        } else {
+            "Snooze ${seconds}s"
+        }
     }
 
     fun cancelNotification(notificationId: Int) {
