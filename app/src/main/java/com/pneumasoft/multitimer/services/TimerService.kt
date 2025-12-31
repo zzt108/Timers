@@ -23,6 +23,8 @@ import com.pneumasoft.multitimer.MainActivity
 import com.pneumasoft.multitimer.R
 import com.pneumasoft.multitimer.receivers.TimerAlarmReceiver
 import com.pneumasoft.multitimer.repository.TimerRepository
+import kotlinx.coroutines.*
+
 
 class TimerService : Service() {
     private val binder = LocalBinder()
@@ -30,6 +32,9 @@ class TimerService : Service() {
     private lateinit var alarmManager: AlarmManager
     private val pendingIntents = HashMap<String, PendingIntent>()
     private var wakeLock: PowerManager.WakeLock? = null
+
+    private var notificationUpdateJob: Job? = null
+    private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     inner class LocalBinder : Binder() {
         fun getService(): TimerService = this@TimerService
@@ -106,28 +111,66 @@ class TimerService : Service() {
         val notificationIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
-
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
+            this,
+            0,
+            notificationIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        // Load active timers from repository
+        val activeTimers = repository.loadTimers().filter { it.isRunning }
+
+        val contentText = when {
+            activeTimers.isEmpty() -> "No active timers"
+            activeTimers.size == 1 -> {
+                val timer = activeTimers.first()
+                "${timer.name}: ${formatTime(timer.remainingSeconds)}"
+            }
+            else -> "${activeTimers.size} timers running"
+        }
+
+        // Use BigTextStyle for multiple timers
+        val bigTextStyle = NotificationCompat.BigTextStyle()
+        if (activeTimers.size > 1) {
+            val timerList = activeTimers.joinToString("\n") { timer ->
+                "• ${timer.name}: ${formatTime(timer.remainingSeconds)}"
+            }
+            bigTextStyle.bigText(timerList)
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("MultiTimer Running")
-            .setContentText(message ?: "Managing your timers")
+            .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_timer_simple)
             .setContentIntent(pendingIntent)
+            .setStyle(if (activeTimers.size > 1) bigTextStyle else null)
+            .setOngoing(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
     }
 
+    // helper method for time formatting
+    private fun formatTime(seconds: Int): String {
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        val secs = seconds % 60
+        return if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes, secs)
+        } else {
+            String.format("%d:%02d", minutes, secs)
+        }
+    }
+
+    /* never used
     private fun updateNotification() {
         // Create a new notification with updated timer count
         val notification = createNotification()
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
+    */
 
     private fun createTimerCompletionNotification(timerName: String): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java).apply {
@@ -177,25 +220,39 @@ class TimerService : Service() {
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
+    // MODIFY: In startForegroundService method (lines ~100-120)
     private fun startForegroundService() {
-        val notificationIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("MultiTimer Running")
-            .setContentText("Managing your timers")
-            .setSmallIcon(R.drawable.ic_timer_simple)
-            .setContentIntent(pendingIntent)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
-
+        val notification = createNotification()
         startForeground(NOTIFICATION_ID, notification)
+        startNotificationUpdates() // NEW: Start the update loop
+    }
+
+    // start periodic updates
+    private fun startNotificationUpdates() {
+        notificationUpdateJob?.cancel()
+        notificationUpdateJob = serviceScope.launch {
+            while (isActive) {
+                try {
+                    updateForegroundNotification()
+                    delay(1000) // Update every 1 second
+                } catch (e: Exception) {
+                    Log.e("TimerService", "Notification update error: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // NEW: Method to update notification
+    private fun updateForegroundNotification() {
+        val notification = createNotification()
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+
+    // NEW: Method to stop updates
+    private fun stopNotificationUpdates() {
+        notificationUpdateJob?.cancel()
+        notificationUpdateJob = null
     }
 
     // Public methods
@@ -308,6 +365,9 @@ class TimerService : Service() {
     }
 
     override fun onDestroy() {
+        stopNotificationUpdates() // Stop the update loop
+        notificationUpdateJob?.cancel()
+        serviceScope.cancel() // Cancel the service scope
         // Release wake lock when service is destroyed
         wakeLock?.let {
             if (it.isHeld) {
