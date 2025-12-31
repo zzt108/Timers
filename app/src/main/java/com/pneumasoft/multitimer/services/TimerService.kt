@@ -21,6 +21,7 @@ import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.MainActivity
 import com.pneumasoft.multitimer.R
+import com.pneumasoft.multitimer.model.TimerItem
 import com.pneumasoft.multitimer.receivers.TimerAlarmReceiver
 import com.pneumasoft.multitimer.repository.TimerRepository
 import kotlinx.coroutines.*
@@ -125,16 +126,19 @@ class TimerService : Service() {
             activeTimers.isEmpty() -> "No active timers"
             activeTimers.size == 1 -> {
                 val timer = activeTimers.first()
-                "${timer.name}: ${formatTime(timer.remainingSeconds)}"
+                // JAVÍTÁS: Újraszámolás
+                val remaining = calculateRemainingSeconds(timer)
+                "${timer.name}: ${formatTime(remaining)}"
             }
             else -> "${activeTimers.size} timers running"
         }
 
-        // Use BigTextStyle for multiple timers
         val bigTextStyle = NotificationCompat.BigTextStyle()
         if (activeTimers.size > 1) {
             val timerList = activeTimers.joinToString("\n") { timer ->
-                "• ${timer.name}: ${formatTime(timer.remainingSeconds)}"
+                // JAVÍTÁS: Újraszámolás itt is
+                val remaining = calculateRemainingSeconds(timer)
+                "• ${timer.name}: ${formatTime(remaining)}"
             }
             bigTextStyle.bigText(timerList)
         }
@@ -149,6 +153,17 @@ class TimerService : Service() {
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
+    }
+
+    // NEW: Calculate real-time remaining seconds
+    private fun calculateRemainingSeconds(timer: TimerItem): Int {
+        if (!timer.isRunning || timer.absoluteEndTimeMillis == null) {
+            return timer.remainingSeconds
+        }
+        val now = System.currentTimeMillis()
+        val end = timer.absoluteEndTimeMillis!!
+        val diff = (end - now) / 1000
+        return diff.toInt().coerceAtLeast(0)
     }
 
     // helper method for time formatting
