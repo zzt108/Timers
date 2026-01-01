@@ -9,7 +9,6 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.receivers.TimerAlarmReceiver
 import com.pneumasoft.multitimer.repository.TimerRepository
 import kotlinx.coroutines.*
@@ -73,17 +72,15 @@ class TimerService : Service() {
         // Setup Notifications
         notificationHelper.createNotificationChannels()
         startForegroundService()
-
-        // Register Receivers
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            timerCompletionReceiver,
-            IntentFilter(TIMER_COMPLETED_ACTION)
-        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Step 7: Handle Action Buttons from Notification
         when (intent?.action) {
+            TIMER_COMPLETED_ACTION -> {
+                handleTimerCompletedIntent(intent)
+                return START_STICKY
+            }
             TimerAlarmReceiver.ACTION_STOP_ALARM_LOOP -> {
                 val timerId = intent.getStringExtra(EXTRA_TIMER_ID)
                 if (timerId != null) {
@@ -101,6 +98,17 @@ class TimerService : Service() {
         return START_STICKY
     }
 
+    private fun handleTimerCompletedIntent(intent: Intent) {
+        // Comments must be English (Space rule)
+        if (intent.getBooleanExtra(SKIP_NOTIFICATION, false)) return
+
+        val timerId = intent.getStringExtra(EXTRA_TIMER_ID) ?: return
+        val timerName = intent.getStringExtra(EXTRA_TIMER_NAME) ?: return
+
+        notificationHelper.showTimerCompletionNotification(timerId, timerName)
+        soundManager.startAlarmLoop(timerId)
+    }
+
     override fun onDestroy() {
         notificationUpdateJob?.cancel()
         soundManager.stopAll()
@@ -111,7 +119,6 @@ class TimerService : Service() {
         }
         wakeLock = null
 
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(timerCompletionReceiver)
         super.onDestroy()
     }
 

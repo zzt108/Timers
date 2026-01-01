@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.PowerManager
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.services.TimerService
 
 class TimerAlarmReceiver : BroadcastReceiver() {
@@ -36,13 +35,6 @@ class TimerAlarmReceiver : BroadcastReceiver() {
                     } else {
                         context.startService(serviceIntent)
                     }
-
-                    // Broadcast locally
-                    LocalBroadcastManager.getInstance(context)
-                        .sendBroadcast(Intent(TimerService.TIMER_COMPLETED_ACTION).apply {
-                            putExtra(TimerService.EXTRA_TIMER_ID, timerId)
-                            putExtra(TimerService.EXTRA_TIMER_NAME, timerName)
-                        })
                 }
 
                 ACTION_DISMISS_ALARM -> {
