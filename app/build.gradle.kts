@@ -19,7 +19,7 @@ android {
         versionCode = 2
         versionName = "1.1 Step 5"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.pneumasoft.multitimer.test.CucumberTestRunner"
 
         // Add build date as a string resource
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
@@ -69,10 +69,14 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.espresso.contrib)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.google.gson)
     implementation(libs.androidx.preference.ktx)
+
+    androidTestImplementation(libs.cucumber.android)
+    androidTestImplementation(libs.cucumber.picocontainer)
 }

@@ -1,3 +1,5 @@
+package com.pneumasoft.multitimer.ui.adapter
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,12 +43,15 @@ class TimerAdapter(
             secondsProgress.progress = secondsValue
 
             // Update button icon based on timer state
+            val isRunning = timer.isRunning
             startPauseButton.setImageResource(
-                if (timer.isRunning) R.drawable.ic_pause else R.drawable.ic_play
+                if (isRunning) R.drawable.ic_pause else R.drawable.ic_play
             )
+            // Update content description for testing
+            startPauseButton.contentDescription = if (isRunning) "Pause" else "Start"
 
             // Calculate and display expiration time
-            if (timer.isRunning) {
+            if (isRunning) {
                 val expirationTimeText = calculateExpirationTime(timer.remainingSeconds)
                 timerExpirationTime.text = expirationTimeText
                 timerExpirationTime.visibility = View.VISIBLE
