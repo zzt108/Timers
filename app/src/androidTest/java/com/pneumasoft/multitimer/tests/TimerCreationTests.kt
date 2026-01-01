@@ -9,7 +9,7 @@ import org.junit.runner.RunWith
 class TimerCreationTests {
     
     @Test
-    fun `should create timer with custom name and duration`() = timerTest {
+    fun should_create_timer_with_custom_name_and_duration() = timerTest {
         mainScreen {
             tapAddTimer()
         }
@@ -31,7 +31,7 @@ class TimerCreationTests {
     }
     
     @Test
-    fun `should create timer with default name when name is empty`() = timerTest {
+    fun should_create_timer_with_default_name_when_name_is_empty() = timerTest {
         mainScreen.tapAddTimer()
         
         addTimerDialog {
@@ -51,7 +51,7 @@ class TimerCreationTests {
     }
     
     @Test
-    fun `should prevent creating timer with zero duration`() = timerTest {
+    fun should_prevent_creating_timer_with_zero_duration() = timerTest {
         mainScreen.tapAddTimer()
         
         addTimerDialog {

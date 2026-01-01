@@ -13,7 +13,7 @@ import org.junit.runner.RunWith
 class BugRegressionTests {
     
     @Test
-    fun `issue 18 - one timer stopping should not affect others`() = timerTest {
+    fun issue_18_one_timer_stopping_should_not_affect_others() = timerTest {
         // Regression test for GitHub Issue #18
         createTimer(name = "Timer A", duration = 1.minutes)
         createTimer(name = "Timer B", duration = 2.minutes)
@@ -36,7 +36,7 @@ class BugRegressionTests {
     }
     
     @Test
-    fun `issue 16 - timer should not drift over 1 hour duration`() = timerTest {
+    fun issue_16_timer_should_not_drift_over_1_hour_duration() = timerTest {
         // Regression test for GitHub Issue #16
         // Timer was losing ~5 minutes per hour
         

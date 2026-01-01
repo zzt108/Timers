@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.pneumasoft.multitimer.dsl.hours
 import com.pneumasoft.multitimer.dsl.minutes
+import com.pneumasoft.multitimer.dsl.seconds
 import com.pneumasoft.multitimer.dsl.timerTest
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +22,7 @@ class TimerExecutionTests {
         )
     
     @Test
-    fun timerShouldContinueRunningWhenAppGoesToBackground() = timerTest {
+    fun timer_should_continue_running_when_app_goes_to_background() = timerTest {
         // Create and start timer
         createTimer(name = "Background Test", duration = 2.minutes)
         mainScreen.timerWithName("Background Test").tapPlayPause()
@@ -49,7 +50,7 @@ class TimerExecutionTests {
     }
     
     @Test
-    fun absoluteTimeCalculationShouldPreventDriftOverLongDuration() = timerTest {
+    fun absolute_time_calculation_should_prevent_drift_over_long_duration() = timerTest {
         createTimer(name = "Precision Test", duration = 1.hours)
         
         mainScreen.timerWithName("Precision Test").tapPlayPause()
