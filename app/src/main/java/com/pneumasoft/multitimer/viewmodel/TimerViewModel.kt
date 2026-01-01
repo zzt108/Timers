@@ -19,8 +19,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Build
 import android.os.IBinder
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.services.TimerService
 
 class TimerViewModel(application: Application) : AndroidViewModel(application) {
@@ -40,12 +40,26 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Private methods
+// app/src/main/java/com/pneumasoft/multitimer/viewmodel/TimerViewModel.kt
+
+// REMOVE (old):
+// import androidx.localbroadcastmanager.content.LocalBroadcastManager
+
     private fun sendTimerCompletedBroadcast(id: String, name: String) {
-        val intent = Intent(TimerService.TIMER_COMPLETED_ACTION).apply {
+        // Comments must be English (Space rule)
+        val context = getApplication<Application>()
+
+        val serviceIntent = Intent(context, TimerService::class.java).apply {
+            action = TimerService.TIMER_COMPLETED_ACTION
             putExtra(TimerService.EXTRA_TIMER_ID, id)
             putExtra(TimerService.EXTRA_TIMER_NAME, name)
         }
-        LocalBroadcastManager.getInstance(getApplication()).sendBroadcast(intent)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(serviceIntent)
+        } else {
+            context.startService(serviceIntent)
+        }
     }
 
     private fun loadSavedTimers() {
