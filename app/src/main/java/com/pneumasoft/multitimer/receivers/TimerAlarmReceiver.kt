@@ -55,6 +55,7 @@ class TimerAlarmReceiver : BroadcastReceiver() {
                     val serviceIntent = Intent(context, TimerService::class.java).apply {
                         action = ACTION_SNOOZE_TIMER
                         putExtra(EXTRA_TIMER_ID, timerId)
+                        putExtra(EXTRA_SNOOZE_DURATION, intent.getLongExtra(EXTRA_SNOOZE_DURATION, 300L))
                     }
                     context.startService(serviceIntent)
                 }
