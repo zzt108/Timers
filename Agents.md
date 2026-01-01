@@ -34,15 +34,14 @@
   - Mark changes with emojis: ✅ NEW, ❌ REMOVE, 🔄 MODIFY.
 
 ## 3. Testing Strategy
-- **Frameworks**: JUnit5, Mockk, Kotest (if available).
-- **Pattern**: `Arrange-Act-Assert` (or Given-When-Then).
-- **Coroutines**: Use `runTest` and `TestDispatcher`.
+- **See**: testing guide `GUIDE-?-?-Testing with Kotlin DSL and Page Object Pattern.md` in .doc folder
 - **Comparison**: Briefly compare with C# testing concepts if helpful for the user.
 
 ## 4. Project Rules (Timers)
 - **Current Version**: Check `ChangeLog.md`.
 - **Branching**: Follow the `PLAN-PROJECT-Major-PlanId-PhaseId` convention (e.g., `feature-Timers-1-02-notification-fix`).
 - **Issues**: Reference GitHub issue IDs (e.g., `#22`) in commit messages and plans.
+- **See**: issues `issues.md` in .doc folder
 
 ## 5. Forbidden Patterns
 - **Do NOT** use `findViewById`.
