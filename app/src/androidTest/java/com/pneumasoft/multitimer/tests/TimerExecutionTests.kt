@@ -5,7 +5,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.pneumasoft.multitimer.dsl.hours
 import com.pneumasoft.multitimer.dsl.minutes
-import com.pneumasoft.multitimer.dsl.seconds
 import com.pneumasoft.multitimer.dsl.timerTest
 import org.junit.Rule
 import org.junit.Test
@@ -22,7 +21,7 @@ class TimerExecutionTests {
         )
     
     @Test
-    fun `timer should continue running when app goes to background`() = timerTest {
+    fun timerShouldContinueRunningWhenAppGoesToBackground() = timerTest {
         // Create and start timer
         createTimer(name = "Background Test", duration = 2.minutes)
         mainScreen.timerWithName("Background Test").tapPlayPause()
@@ -50,10 +49,9 @@ class TimerExecutionTests {
     }
     
     @Test
-    fun `absolute time calculation should prevent drift over long duration`() = timerTest {
+    fun absoluteTimeCalculationShouldPreventDriftOverLongDuration() = timerTest {
         createTimer(name = "Precision Test", duration = 1.hours)
         
-        val startTime = System.currentTimeMillis()
         mainScreen.timerWithName("Precision Test").tapPlayPause()
         
         // Simulate time passage without CPU sleep (use IdlingResource or just wait)

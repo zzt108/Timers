@@ -1,9 +1,8 @@
 package com.pneumasoft.multitimer.tests
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.pneumasoft.multitimer.dsl.seconds
 import com.pneumasoft.multitimer.dsl.timerTest
-import com.pneumasoft.multitimer.robots.SettingsScreenRobot.SnoozeDuration.ShortSnooze
+import com.pneumasoft.multitimer.robots.SnoozeDuration.ShortSnooze
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -11,7 +10,7 @@ import org.junit.runner.RunWith
 class AlarmNotificationTests {
     
     @Test
-    fun `alarm should show full-screen notification when timer completes`() = timerTest {
+    fun alarmShouldShowFullScreenNotificationWhenTimerCompletes() = timerTest {
         createTimer(name = "Alarm Test", duration = 5.seconds)
         mainScreen.timerWithName("Alarm Test").tapPlayPause()
         
@@ -25,7 +24,7 @@ class AlarmNotificationTests {
     }
     
     @Test
-    fun `alarm should loop sound until dismissed`() = timerTest {
+    fun alarmShouldLoopSoundUntilDismissed() = timerTest {
         createTimer(duration = 3.seconds)
         startAllTimers()
         
@@ -42,7 +41,7 @@ class AlarmNotificationTests {
     }
     
     @Test
-    fun `snooze should restart timer with configured duration`() = timerTest {
+    fun snoozeShouldRestartTimerWithConfiguredDuration() = timerTest {
         settingsScreen {
             open()
             setSnoozeDuration(ShortSnooze, 30)
@@ -62,36 +61,5 @@ class AlarmNotificationTests {
                 shouldShowRemainingTime("0:30")
             }
         }
-    }
-
-    // Helper extensions to match the guide's DSL usage
-    private fun com.pneumasoft.multitimer.dsl.TimerTestContext.createTimer(name: String = "Timer 1", duration: java.time.Duration) {
-        // Implementation using robots
-        mainScreen.tapAddTimer()
-        addTimerDialog.apply {
-            enterName(name)
-            // Duration split
-            val hours = duration.toHours().toInt()
-            val minutes = duration.toMinutesPart()
-            setHours(hours)
-            setMinutes(minutes)
-            tapAdd()
-        }
-    }
-
-    private fun com.pneumasoft.multitimer.dsl.TimerTestContext.startTimer(name: String) {
-        mainScreen.timerWithName(name).tapPlayPause()
-    }
-    
-    private fun com.pneumasoft.multitimer.dsl.TimerTestContext.startAllTimers() {
-        // Assuming we only have one or we loop
-        // For this test context, maybe just start the last created?
-        // Or implement loop in MainScreenRobot
-        startTimer("Timer 1") // Default
-    }
-
-    private fun com.pneumasoft.multitimer.dsl.TimerTestContext.waitForCompletion() {
-        // Wait enough time
-        waitFor(6.seconds)
     }
 }

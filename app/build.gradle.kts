@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.pneumasoft.multitimer"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pneumasoft.multitimer"
@@ -71,6 +71,9 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.uiautomator)
+    androidTestImplementation(libs.androidx.test.rules)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.google.gson)

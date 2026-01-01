@@ -1,8 +1,11 @@
 package com.pneumasoft.multitimer.dsl
 
 import android.os.SystemClock
+import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.UiController
+import androidx.test.espresso.ViewAction
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
 import com.pneumasoft.multitimer.MainActivity
 import com.pneumasoft.multitimer.robots.AddTimerDialogRobot
@@ -10,11 +13,8 @@ import com.pneumasoft.multitimer.robots.AlarmScreenRobot
 import com.pneumasoft.multitimer.robots.MainScreenRobot
 import com.pneumasoft.multitimer.robots.SettingsScreenRobot
 import java.time.Duration
-import org.junit.Assert.assertEquals
-import androidx.test.espresso.UiController
-import androidx.test.espresso.ViewAction
-import android.view.View
 import org.hamcrest.Matcher
+import org.junit.Assert.assertEquals
 
 class TimerTestContext(
     private val scenario: ActivityScenario<MainActivity>
@@ -23,6 +23,12 @@ class TimerTestContext(
     val addTimerDialog = AddTimerDialogRobot()
     val alarmScreen = AlarmScreenRobot()
     val settingsScreen = SettingsScreenRobot()
+    
+    // DSL helpers for Robots
+    fun mainScreen(block: MainScreenRobot.() -> Unit) = mainScreen.apply(block)
+    fun addTimerDialog(block: AddTimerDialogRobot.() -> Unit) = addTimerDialog.apply(block)
+    fun alarmScreen(block: AlarmScreenRobot.() -> Unit) = alarmScreen.apply(block)
+    fun settingsScreen(block: SettingsScreenRobot.() -> Unit) = settingsScreen.apply(block)
     
     // Time manipulation helpers
     fun waitFor(duration: Duration) {
@@ -63,6 +69,8 @@ class TimerTestContext(
         // Let's just alias it to starting the known timers or leave it for the test to define if complex.
         // Actually, the guide usage implies it's a context method.
         // I'll leave a placeholder or basic implementation.
+        // Assuming "Timer 1" is the default from createTimer
+        startTimer("Timer 1")
     }
     
     fun waitForCompletion() {
@@ -71,9 +79,14 @@ class TimerTestContext(
         waitFor(Duration.ofSeconds(6))
     }
 
+    // Define the extension property to convert Int to Duration
+    val Int.seconds: Duration
+        get() = Duration.ofSeconds(this.toLong())
+
     // Assertions with semantic naming
-    infix fun Int.seconds.shouldEqual(expected: Duration) {
-        assertEquals(expected.seconds, this.seconds.seconds)
+    // Define the infix assertion on the Duration type
+    infix fun Duration.shouldEqual(expected: Duration) {
+        assertEquals(expected.seconds, this.seconds)
     }
 }
 
