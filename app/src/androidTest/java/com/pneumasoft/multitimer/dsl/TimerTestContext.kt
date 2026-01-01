@@ -46,7 +46,7 @@ class TimerTestContext(
             enterName(name)
             // Duration split
             val hours = duration.toHours().toInt()
-            val minutes = duration.toMinutesPart()
+            val minutes = (duration.toMinutes() % 60).toInt()
             // We only have hours and minutes in the UI for now
             setHours(hours)
             setMinutes(minutes)
@@ -59,18 +59,8 @@ class TimerTestContext(
     }
     
     fun startAllTimers() {
-        // Logic to start all. For now, assuming single timer or specific names.
-        // Ideally we would iterate, but robots interact with UI.
-        // We can just try starting "Timer 1", "Timer 2" if we know they exist, or just the named ones.
-        // For the purpose of the guide examples which usually set up specific timers:
-        // We will leave this abstract or specific to the test.
-        // But the guide calls `startAllTimers()`.
-        // Let's implement it by trying to find all visible items? Hard with Espresso.
-        // Let's just alias it to starting the known timers or leave it for the test to define if complex.
-        // Actually, the guide usage implies it's a context method.
-        // I'll leave a placeholder or basic implementation.
-        // Assuming "Timer 1" is the default from createTimer
-        startTimer("Timer 1")
+        // Assuming "Timer" is the default from createTimer
+        startTimer("Timer")
     }
     
     fun waitForCompletion() {
@@ -78,10 +68,6 @@ class TimerTestContext(
         // This is heuristic.
         waitFor(Duration.ofSeconds(6))
     }
-
-    // Define the extension property to convert Int to Duration
-    val Int.seconds: Duration
-        get() = Duration.ofSeconds(this.toLong())
 
     // Assertions with semantic naming
     // Define the infix assertion on the Duration type

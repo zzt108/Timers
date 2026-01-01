@@ -41,12 +41,15 @@ class TimerAdapter(
             secondsProgress.progress = secondsValue
 
             // Update button icon based on timer state
+            val isRunning = timer.isRunning
             startPauseButton.setImageResource(
-                if (timer.isRunning) R.drawable.ic_pause else R.drawable.ic_play
+                if (isRunning) R.drawable.ic_pause else R.drawable.ic_play
             )
+            // ✅ Set content description for Accessibility and UI Tests
+            startPauseButton.contentDescription = if (isRunning) "Pause" else "Play"
 
             // Calculate and display expiration time
-            if (timer.isRunning) {
+            if (isRunning) {
                 val expirationTimeText = calculateExpirationTime(timer.remainingSeconds)
                 timerExpirationTime.text = expirationTimeText
                 timerExpirationTime.visibility = View.VISIBLE
@@ -70,14 +73,15 @@ class TimerAdapter(
         return formatter.format(calendar.time)
     }
 
-    // Format time to show only hours and minutes (no seconds)
+    // ✅ Format time to show m:ss or h:mm:ss to match test expectations
     private fun formatTime(seconds: Int): String {
         val hours = seconds / 3600
         val minutes = (seconds % 3600) / 60
+        val sec = seconds % 60
         return if (hours > 0) {
-            "%d h %02d m".format(hours, minutes)
+            "%d:%02d:%02d".format(hours, minutes, sec)
         } else {
-            "%d min".format(minutes)
+            "%d:%02d".format(minutes, sec)
         }
     }
 

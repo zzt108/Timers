@@ -46,6 +46,7 @@ class AlarmNotificationTests {
         settingsScreen {
             open()
             setSnoozeDuration(ShortSnooze, 30)
+            close()
         }
         
         createTimer(name = "Snooze Test", duration = 2.seconds)

@@ -14,39 +14,19 @@ class AddTimerDialogRobot : BaseRobot() {
     }
     
     fun setHours(hours: Int) {
-        // Implementation depends on UI. 
-        // Current UI uses Up/Down buttons for hours.
-        // We need to read the current value and click up/down until it matches.
-        // This is tricky in Espresso without custom logic or just assuming start at 0.
-        // For robustness, maybe just click UP N times assuming 0 start.
-        // Or check text and adjust.
-        
-        // Simplified: Click UP 'hours' times
+        // Implementation: click UP 'hours' times
         repeat(hours) {
             tapView(R.id.hours_up_button)
         }
     }
     
     fun setMinutes(minutes: Int) {
-        // Using SeekBar. 
-        // In Espresso, we can use `GeneralSwipeAction` or set progress if we have a custom ViewAction.
-        // Let's assume we have a helper or just use a custom ViewAction.
-        // For this Robot, I'll use a custom ViewAction to set progress on SeekBar.
-        
+        // Set SeekBar progress using helper
         onView(withId(R.id.minutes_slider)).perform(setProgress(minutes))
     }
     
     fun tapAdd() {
         onView(withText("Add")).perform(click())
-    }
-    
-    fun shouldShowError(message: String) {
-        // Toast checking is hard in Espresso. 
-        // If it's a TextView error, check that.
-        // The code uses Toast.makeText(...).show()
-        // Checking Toast in Espresso 3.0+ requires custom matchers on the window decor view.
-        
-        // verifyTextInToast(message) // Placeholder
     }
     
     fun shouldStillBeOpen() {
@@ -66,5 +46,10 @@ class AddTimerDialogRobot : BaseRobot() {
                 (view as android.widget.SeekBar).progress = progress
             }
         }
+    }
+
+    // Support block syntax
+    operator fun invoke(block: AddTimerDialogRobot.() -> Unit) {
+        this.apply(block)
     }
 }
