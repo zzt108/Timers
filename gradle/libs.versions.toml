@@ -17,6 +17,7 @@ constraintlayout = "2.1.4"
 preferenceKtx = "1.2.0"
 uiautomator = "2.3.0"
 testRules = "1.6.1"
+espressoContrib = "3.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.16.0" }
@@ -42,6 +43,7 @@ androidx-activity = { group = "androidx.activity", name = "activity", version = 
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "testRules" }
+androidx-espresso-contrib = { group = "androidx.test.espresso", name = "espresso-contrib", version.ref = "espressoContrib" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
