@@ -30,80 +30,93 @@ class TimerExecutionTests {
 
     @Before
     fun cleanup() {
-        // Töröljük a mentett időzítőket a SharedPreferences-ből
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val prefs = context.getSharedPreferences("timer_preferences", Context.MODE_PRIVATE)
 
         prefs.edit().apply {
             clear()
-            // FONTOS: Beállítjuk, hogy a default timer-ek "létre lettek hozva",
-            // így a Repository nem generálja le őket újra (Energy, Nerve, stb.).
-            // Ellenőrizd a TimerDataHelper.kt-ban a pontos kulcsot!
-            // A snippet alapján valószínűleg "defaulttimerscreated" vagy "default_timers_created".
-            // Itt a legvalószínűbbet használom a konvenciók alapján:
             putBoolean("default_timers_created", true)
             commit()
         }
 
-        // Újraindítjuk az Activity-t, hogy a tiszta állapotot töltse be
         activityScenarioRule.scenario.recreate()
     }
 
     @Test
     fun timer_should_continue_running_when_app_goes_to_background() {
-        // Wait for any dialogs to settle
+        // Wait for any startup dialogs
         Thread.sleep(2000)
 
-        // Close any battery optimization dialog if visible (by pressing back)
-        androidx.test.espresso.Espresso.pressBack()
+        // Dismiss battery dialog if present
+        try {
+            androidx.test.espresso.Espresso.pressBack()
+        } catch (e: Exception) {
+            // Dialog might not exist, ignore
+        }
 
         Thread.sleep(500)
 
-        // Create and start timer
+        // Create timer
         mainScreen.tapAddTimer()
         addTimerDialog.apply {
             enterName("Background Test")
             setMinutes(2)
             tapAdd()
         }
-        Thread.sleep(800) // Wait for dialog dismiss + adapter update
+        Thread.sleep(1000) // Wait for adapter update
 
         // Start timer
         mainScreen.timerWithName("Background Test")?.tapPlayPause()
+        Thread.sleep(1000) // Wait for timer to start
 
-        // Wait a bit
-        Thread.sleep(3000)
+        // ✅ FIX: Should check that timer IS running (not "not running")
+        mainScreen.timerWithName("Background Test")?.shouldBeRunning()
 
-        // Verify it's still running
-        mainScreen.timerWithName("Background Test")?.shouldNotBeRunning()
+        // Simulate background (could add UiDevice.pressHome() here)
+        Thread.sleep(2000)
+
+        // Verify timer still running
+        mainScreen.timerWithName("Background Test")?.shouldBeRunning()
     }
 
     @Test
     fun absolute_time_calculation_should_prevent_drift_over_long_duration() {
-        // Wait for any dialogs to settle
+        // Wait for startup
         Thread.sleep(2000)
 
-        // Close any battery optimization dialog if visible
-        androidx.test.espresso.Espresso.pressBack()
+        try {
+            androidx.test.espresso.Espresso.pressBack()
+        } catch (e: Exception) {
+            // Ignore
+        }
 
         Thread.sleep(500)
 
-        // Create timer with specific duration
+        // Create timer
         mainScreen.tapAddTimer()
         addTimerDialog.apply {
             enterName("Precision Test")
             setMinutes(1)
             tapAdd()
         }
-        Thread.sleep(800) // Wait for dialog dismiss + adapter update
+        Thread.sleep(1000)
 
         // Start timer
         mainScreen.timerWithName("Precision Test")?.tapPlayPause()
+        Thread.sleep(1000)
 
-        // Wait short time
-        Thread.sleep(2000)
-
-        // Verify timer is running
+        // Verify running
         mainScreen.timerWithName("Precision Test")?.shouldBeRunning()
+
+        // Optional: Check remaining time is decreasing correctly
+        val remaining1 = mainScreen.timerWithName("Precision Test")?.getRemainingMillis() ?: 0
+        Thread.sleep(2000)
+        val remaining2 = mainScreen.timerWithName("Precision Test")?.getRemainingMillis() ?: 0
+
+        // Should have decreased by ~2000ms (allow 500ms tolerance)
+        val decrease = remaining1 - remaining2
+        assert(decrease in 1500..2500) {
+            "Expected ~2000ms decrease, got $decrease ms"
+        }
     }
 }
