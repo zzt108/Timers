@@ -56,7 +56,10 @@
             android:name=".services.TimerService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse|dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                      android:value="Continuous timer management and reliable alarm delivery with background audio." />
+        </service>
 
         <receiver
             android:name=".receivers.TimerAlarmReceiver"

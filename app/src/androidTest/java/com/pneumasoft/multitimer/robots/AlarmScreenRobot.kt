@@ -56,23 +56,29 @@ class AlarmScreenRobot : BaseRobot() {
     }
 
     fun shouldPlaySound() {
-        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as TimerApplication
-        assertTrue("Alarm sound should be playing", app.getSoundManager().isPlaying)
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as? TimerApplication
+        assertTrue("Alarm sound should be playing", app?.soundManager?.isPlaying == true)
     }
 
+
+
     fun verifySoundLooping() {
-        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as TimerApplication
-        assertTrue("Alarm should be looping", app.getSoundManager().isLooping)
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as? TimerApplication
+        assertTrue("Alarm should be looping", app?.soundManager?.isLooping == true)
     }
+
+
 
     fun shouldStillPlaySound() {
         shouldPlaySound()
     }
 
     fun shouldNotPlaySound() {
-        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as TimerApplication
-        assertTrue("Alarm sound should not be playing", !app.getSoundManager().isPlaying)
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as? TimerApplication
+        assertTrue("Alarm sound should not be playing", app?.soundManager?.isPlaying != true)
     }
+
+
 
     // Support block syntax
     operator fun invoke(block: AlarmScreenRobot.() -> Unit) = this.apply(block)

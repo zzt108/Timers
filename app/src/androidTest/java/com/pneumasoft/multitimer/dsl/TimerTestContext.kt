@@ -14,6 +14,9 @@ import com.pneumasoft.multitimer.robots.AddTimerDialogRobot
 import com.pneumasoft.multitimer.robots.AlarmScreenRobot
 import com.pneumasoft.multitimer.robots.MainScreenRobot
 import com.pneumasoft.multitimer.robots.SettingsScreenRobot
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.platform.app.InstrumentationRegistry
 import java.time.Duration
 import org.hamcrest.Matcher
 import org.junit.Assert.assertEquals
@@ -47,12 +50,23 @@ class TimerTestContext(private val scenario: ActivityScenario<MainActivity>) {
     }
 
     fun dismissStartupDialogs() {
-        try {
-            onView(ViewMatchers.withText("Later")).perform(ViewActions.click())
-        } catch (e: Exception) {
-            // Ignored
+        // Dismiss "Later" buttons (Battery, Exact Alarm)
+        repeat(3) {
+            try {
+                onView(ViewMatchers.withText("Later")).perform(ViewActions.click())
+                Thread.sleep(500)
+            } catch (e: Exception) {}
+        }
+        
+        // Handle system permission dialogs (POST_NOTIFICATIONS)
+        val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+        val allowButton = device.findObject(By.text("Allow"))
+        if (allowButton != null) {
+            allowButton.click()
         }
     }
+
+
 
     fun createTimer(name: String = "Timer", duration: Duration) {
         mainScreen.tapAddTimer()

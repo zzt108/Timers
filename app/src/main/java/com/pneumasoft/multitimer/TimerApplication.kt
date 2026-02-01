@@ -13,15 +13,12 @@ import kotlinx.coroutines.SupervisorJob
 
 
 class TimerApplication : Application() {
-    private lateinit var soundManager: TimerSoundManager
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    fun getSoundManager(): TimerSoundManager {
-        if (!::soundManager.isInitialized) {
-            soundManager = TimerSoundManager(this, appScope)
-        }
-        return soundManager
+    val soundManager: TimerSoundManager by lazy {
+        TimerSoundManager(this, appScope)
     }
+
 
     override fun onCreate() {
         super.onCreate()
@@ -54,15 +51,9 @@ class TimerApplication : Application() {
             override fun onActivityDestroyed(activity: Activity) {}
         })
 
-        // Set uncaught exception handler
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            Log.e("TIMER_APP", "Uncaught exception in thread $thread", throwable)
-            // Save active timer states for potential recovery
-            saveTimerStates(throwable)
-        }
-
         ApllySavedThemePreference()
     }
+
 
     private fun ApllySavedThemePreference(){
         // Apply the saved theme preference

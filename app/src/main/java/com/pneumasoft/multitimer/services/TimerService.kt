@@ -64,7 +64,12 @@ class TimerService : Service() {
         repository = TimerRepository(applicationContext)
         notificationHelper = TimerNotificationHelper(this, repository)
         alarmScheduler = TimerAlarmScheduler(this)
-        soundManager = (application as TimerApplication).getSoundManager()
+        
+        // Use safe cast for TimerApplication
+        val app = application as? TimerApplication
+        soundManager = app?.soundManager ?: TimerSoundManager(this, serviceScope)
+
+
 
         // Setup System
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -140,9 +145,22 @@ class TimerService : Service() {
 
     private fun startForegroundService() {
         val notification = notificationHelper.getForegroundNotification()
-        startForeground(TimerNotificationHelper.NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                TimerNotificationHelper.NOTIFICATION_ID, 
+                notification,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                } else {
+                    0
+                }
+            )
+        } else {
+            startForeground(TimerNotificationHelper.NOTIFICATION_ID, notification)
+        }
         startNotificationUpdates()
     }
+
 
     private fun startNotificationUpdates() {
         notificationUpdateJob?.cancel()
