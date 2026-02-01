@@ -227,6 +227,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkAndRequestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            AlertDialog.Builder(this)
+                .setTitle("Display Over Other Apps")
+                .setMessage("To ensure the alarm dialog pops up when using other apps, please allow 'Display over other apps'.")
+                .setPositiveButton("Settings") { _, _ ->
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Failed to open overlay settings", e)
+                    }
+                }
+                .setNegativeButton("Later", null)
+                .show()
+        }
+    }
+
 
     // Private helper methods - Timer operations
     private fun handleStartPause(id: String) {
@@ -456,6 +476,7 @@ class MainActivity : AppCompatActivity() {
 
         requestBatteryOptimizationExemption()
         checkAndRequestFullScreenIntentPermission()
+        checkAndRequestOverlayPermission()
 
         setupRecyclerView()
         setupAddButton()

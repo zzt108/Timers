@@ -12,6 +12,8 @@ import android.os.PowerManager
 import com.pneumasoft.multitimer.TimerApplication
 import com.pneumasoft.multitimer.receivers.TimerAlarmReceiver
 import com.pneumasoft.multitimer.repository.TimerRepository
+import android.provider.Settings
+import com.pneumasoft.multitimer.AlarmActivity
 import kotlinx.coroutines.*
 
 
@@ -114,6 +116,16 @@ class TimerService : Service() {
 
         notificationHelper.showTimerCompletionNotification(timerId, timerName)
         soundManager.startAlarmLoop(timerId)
+
+        // Force Activity Launch if allowed
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
+            val activityIntent = Intent(this, AlarmActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(EXTRA_TIMER_ID, timerId)
+                putExtra(EXTRA_TIMER_NAME, timerName)
+            }
+            startActivity(activityIntent)
+        }
     }
 
     override fun onDestroy() {
