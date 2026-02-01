@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Step 5: Szükséges a pontos időzítéshez Android 12+ alatt -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Step 5: Előkészület az Issue 21-hez (Alarm notification on lock screen) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:name=".TimerApplication"
@@ -42,11 +47,21 @@
             android:exported="false"
             android:parentActivityName=".MainActivity"/>
 
+        <activity
+            android:name=".AlarmActivity"
+            android:exported="false"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:launchMode="singleInstance" />
+
         <service
             android:name=".services.TimerService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse|dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                      android:value="Continuous timer management and reliable alarm delivery with background audio." />
+        </service>
 
         <receiver
             android:name=".receivers.TimerAlarmReceiver"

@@ -26,7 +26,19 @@ class TimerDataHelper(context: Context) {
     fun loadTimers(): List<TimerItem> {
         val timersJson = sharedPreferences.getString(KEY_TIMERS, null) ?: return emptyList()
         val timerType: Type = object : TypeToken<List<TimerItem>>() {}.type
-        return gson.fromJson(timersJson, timerType)
+        val timers: List<TimerItem> = gson.fromJson(timersJson, timerType) ?: emptyList()
+
+        // Migration logic: calculate absoluteEndTimeMillis for running timers if missing
+        return timers.map { timer ->
+            if (timer.isRunning && timer.absoluteEndTimeMillis == null) {
+                // If it was running but has no end time (from old version),
+                // we restart the calculation based on current time + remaining
+                val calculatedEndTime = System.currentTimeMillis() + (timer.remainingSeconds * 1000L)
+                timer.copy(absoluteEndTimeMillis = calculatedEndTime)
+            } else {
+                timer
+            }
+        }
     }
 
     fun hasCreatedDefaultTimers(): Boolean {

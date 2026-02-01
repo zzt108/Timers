@@ -32,6 +32,8 @@ import android.view.Menu
 import android.view.MenuItem
 import android.provider.Settings
 import android.net.Uri
+import android.app.AlarmManager
+import android.app.NotificationManager
 
 class MainActivity : AppCompatActivity() {
     // Properties
@@ -139,6 +141,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshTimers()
+    }
+
     private fun requestBatteryOptimizationExemption() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = getSystemService(POWER_SERVICE) as PowerManager
@@ -177,6 +184,74 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun checkAndRequestExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
+                AlertDialog.Builder(this)
+                    .setTitle("Exact Alarm Permission")
+                    .setMessage("Timers require exact alarm permission to function accurately. Please grant this permission in Settings.")
+                    .setPositiveButton("Settings") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "Failed to open alarm settings", e)
+                        }
+                    }
+                    .setNegativeButton("Later", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun checkAndRequestFullScreenIntentPermission() {
+        if (Build.VERSION.SDK_INT >= 34) { // Android 14 (UPSIDE_DOWN_CAKE)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (!notificationManager.canUseFullScreenIntent()) {
+                AlertDialog.Builder(this)
+                    .setTitle("Full Screen Permission")
+                    .setMessage("For the timer alarm to pop up when the screen is locked or in use, please allow Full Screen Intent permission.")
+                    .setPositiveButton("Settings") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "Failed to open full screen intent settings", e)
+                            Toast.makeText(this, "Please allow Full Screen Intent in App Info", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    .setNegativeButton("Later", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun checkAndRequestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            AlertDialog.Builder(this)
+                .setTitle("Display Over Other Apps")
+                .setMessage("To ensure the alarm dialog pops up when using other apps, please allow 'Display over other apps'.")
+                .setPositiveButton("Settings") { _, _ ->
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Failed to open overlay settings", e)
+                    }
+                }
+                .setNegativeButton("Later", null)
+                .show()
+        }
+    }
+
 
     // Private helper methods - Timer operations
     private fun handleStartPause(id: String) {
@@ -405,6 +480,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         requestBatteryOptimizationExemption()
+        checkAndRequestFullScreenIntentPermission()
+        checkAndRequestOverlayPermission()
 
         setupRecyclerView()
         setupAddButton()

@@ -17,10 +17,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Build
 import android.os.IBinder
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.pneumasoft.multitimer.services.TimerService
 
 class TimerViewModel(application: Application) : AndroidViewModel(application) {
@@ -36,35 +37,62 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
 
     // Initialization
     init {
-        loadSavedTimers()
+        refreshTimers()
     }
 
     // Private methods
+// app/src/main/java/com/pneumasoft/multitimer/viewmodel/TimerViewModel.kt
+
+// REMOVE (old):
+// import androidx.localbroadcastmanager.content.LocalBroadcastManager
+
     private fun sendTimerCompletedBroadcast(id: String, name: String) {
-        val intent = Intent(TimerService.TIMER_COMPLETED_ACTION).apply {
+        // Comments must be English (Space rule)
+        val context = getApplication<Application>()
+
+        val serviceIntent = Intent(context, TimerService::class.java).apply {
+            action = TimerService.TIMER_COMPLETED_ACTION
             putExtra(TimerService.EXTRA_TIMER_ID, id)
             putExtra(TimerService.EXTRA_TIMER_NAME, name)
         }
-        LocalBroadcastManager.getInstance(getApplication()).sendBroadcast(intent)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(serviceIntent)
+        } else {
+            context.startService(serviceIntent)
+        }
     }
 
-    private fun loadSavedTimers() {
+    fun refreshTimers() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // First try to load saved timers
                 val savedTimers = repository.loadTimers()
 
                 if (savedTimers.isNotEmpty()) {
-                    _timers.value = savedTimers
+                    withContext(Dispatchers.Main) {
+                        _timers.value = savedTimers
+                        
+                        // Ensure all running timers have a countdown coroutine
+                        savedTimers.forEach { timer ->
+                            if (timer.isRunning && !activeTimers.containsKey(timer.id)) {
+                                viewModelScope.launch(Dispatchers.Main) {
+                                    startCountdownCoroutine(timer.id)
+                                }
+                            }
+                        }
+                    }
                 } else {
                     // If no saved timers found, create defaults
                     val defaultTimers = repository.createDefaultTimersIfNeeded()
                     if (defaultTimers.isNotEmpty()) {
-                        _timers.value = defaultTimers
+                        withContext(Dispatchers.Main) {
+                            _timers.value = defaultTimers
+                        }
                     }
                 }
             } catch (e: Exception) {
-                Log.e("TimerViewModel", "Failed to load saved timers", e)
+                Log.e("TimerViewModel", "Failed to refresh timers", e)
             }
         }
     }
@@ -175,8 +203,16 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         val timer = _timers.value.find { it.id == id } ?: return
         if (timer.isRunning) return
 
+        // Calculate absolute end time
+        val endTimeMillis = System.currentTimeMillis() + (timer.remainingSeconds * 1000L)
+
         _timers.value = _timers.value.map {
-            if (it.id == id) it.copy(isRunning = true) else it
+            if (it.id == id) {
+                it.copy(
+                    isRunning = true,
+                    absoluteEndTimeMillis = endTimeMillis
+                )
+            } else it
         }
         saveTimers()
 
@@ -192,11 +228,11 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
                     val binder = service as TimerService.LocalBinder
                     val timerService = binder.getService()
 
-                    // Schedule using AlarmManager
+                    // Schedule using AlarmManager with absolute end time
                     timerService.scheduleTimer(
                         timerId = timer.id,
                         timerName = timer.name,
-                        durationMillis = timer.remainingSeconds * 1000L
+                        triggerAtMillis = endTimeMillis
                     )
 
                     context.unbindService(this)
@@ -208,47 +244,59 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
             }, Context.BIND_AUTO_CREATE)
         }
 
-        // Keep existing coroutine-based implementation for UI updates
-        // but make it stop once the alarm triggers
+        startCountdownCoroutine(id)
+    }
 
+    private fun startCountdownCoroutine(id: String) {
+        // Cancel existing job if any
+        activeTimers[id]?.cancel()
+
+        // Coroutine-based UI updates using absolute time calculation
         val job = viewModelScope.launch {
             try {
-                val startTime = System.currentTimeMillis()
-                var lastTickTime = startTime
-
                 while (isActive) {
+                    val currentTimer = _timers.value.find { it.id == id } ?: break
+                    val endTime = currentTimer.absoluteEndTimeMillis ?: break
+
+                    // Calculate remaining time from absolute end time
                     val now = System.currentTimeMillis()
-                    val elapsedSinceLastTick = now - lastTickTime
+                    val remainingMillis = endTime - now
+                    val remainingSeconds = (remainingMillis / 1000).toInt().coerceAtLeast(0)
 
-                    if (elapsedSinceLastTick >= 1000) {
-                        lastTickTime = now
-
-                        val currentTimer = _timers.value.find { it.id == id } ?: break
-                        if (currentTimer.remainingSeconds <= 0) break
-
+                    if (remainingSeconds <= 0) {
+                        // Timer completed
+                        sendTimerCompletedBroadcast(id, currentTimer.name)
                         _timers.value = _timers.value.map {
                             if (it.id == id) {
-                                val newRemaining = it.remainingSeconds - 1
-                                if (newRemaining <= 0) {
-                                    sendTimerCompletedBroadcast(id, it.name)
-                                }
                                 it.copy(
-                                    remainingSeconds = newRemaining,
-                                    isRunning = newRemaining > 0,
-                                    completionTimestamp = if (newRemaining <= 0) System.currentTimeMillis() else null
+                                    remainingSeconds = 0,
+                                    isRunning = false,
+                                    completionTimestamp = System.currentTimeMillis(),
+                                    absoluteEndTimeMillis = null
                                 )
                             } else it
                         }
                         saveTimers()
+                        break
                     }
-                    delay(100)
+
+                    // Update remaining time
+                    _timers.value = _timers.value.map {
+                        if (it.id == id) {
+                            it.copy(remainingSeconds = remainingSeconds)
+                        } else it
+                    }
+
+                    delay(1000) // Now 1 sec delay is OK, because we always recalculate
                 }
             } catch (e: Exception) {
                 Log.e("TimerViewModel", "Timer error: ${e.message}", e)
                 _timers.value = _timers.value.map {
-                    if (it.id == id) it.copy(isRunning = false) else it
+                    if (it.id == id) it.copy(isRunning = false, absoluteEndTimeMillis = null) else it
                 }
                 saveTimers()
+            } finally {
+                activeTimers.remove(id)
             }
         }
 
@@ -278,10 +326,47 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         saveTimers()
     }
 
+    fun clearAllTimers() {
+        // Cancel all coroutines
+        for (job in activeTimers.values) {
+            job.cancel()
+        }
+        activeTimers.clear()
+
+        // Cancel all alarms in service (Single binding operation)
+        cancelAllAlarmsInService()
+
+        // Update state once
+        _timers.value = emptyList()
+        saveTimers()
+    }
+
     override fun onCleared() {
         super.onCleared()
         activeTimers.values.forEach { it.cancel() }
         activeTimers.clear()
         saveTimers()
+    }
+
+    private fun cancelAllAlarmsInService() {
+        val context = getApplication<Application>()
+        val serviceIntent = Intent(context, TimerService::class.java)
+
+        context.bindService(serviceIntent, object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                val binder = service as TimerService.LocalBinder
+                val timerService = binder.getService()
+
+                // Cancel all alarms
+                timerService.cancelAllTimers()
+
+                // Unbind from service
+                context.unbindService(this)
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                // Not needed
+            }
+        }, Context.BIND_AUTO_CREATE)
     }
 }

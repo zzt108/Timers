@@ -1,0 +1,51 @@
+package com.pneumasoft.multitimer.dsl
+
+import android.view.View
+import android.widget.TextView
+import androidx.annotation.IdRes
+import androidx.recyclerview.widget.RecyclerView
+import androidx.test.espresso.matcher.BoundedMatcher
+import com.pneumasoft.multitimer.R
+import org.hamcrest.Description
+import org.hamcrest.Matcher
+
+fun hasChildCount(expectedCount: Int): Matcher<View> {
+    return object : BoundedMatcher<View, RecyclerView>(RecyclerView::class.java) {
+        override fun describeTo(description: Description) {
+            description.appendText("RecyclerView with item count: $expectedCount")
+        }
+        
+        override fun matchesSafely(view: RecyclerView): Boolean {
+            return view.adapter?.itemCount == expectedCount
+        }
+    }
+}
+
+fun withRecyclerView(@IdRes recyclerViewId: Int) = 
+    RecyclerViewMatcher(recyclerViewId)
+
+class RecyclerViewMatcher(private val recyclerViewId: Int) {
+    fun atPositionWithText(text: String): Matcher<View> {
+        return object : BoundedMatcher<View, View>(View::class.java) {
+            override fun describeTo(description: Description) {
+                description.appendText("RecyclerView item with text: $text")
+            }
+
+            override fun matchesSafely(view: View): Boolean {
+                val recyclerView = view.rootView.findViewById<RecyclerView>(recyclerViewId)
+                if (recyclerView == null || recyclerView.adapter == null) return false
+
+                for (i in 0 until recyclerView.adapter!!.itemCount) {
+                    val viewHolder = recyclerView.findViewHolderForAdapterPosition(i)
+                    val itemView = viewHolder?.itemView ?: continue  // Skip if null
+
+                    val nameView = itemView.findViewById<TextView>(R.id.timer_name)
+                    if (nameView != null && nameView.text.toString() == text) {
+                        return true  // ← FIX: return csak ha megtaláltuk
+                    }
+                }
+                return false
+            }
+        }
+    }
+}

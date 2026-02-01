@@ -1,0 +1,53 @@
+# (Optional) docs not required for code understanding:
+*.md
+
+# (Optional) wrapper scripts not required for code understanding:
+# gradlew
+# gradlew.bat
+
+# (Optional) shrinker rules only needed for release/minify debugging:
+# **/proguard-rules.pro
+
+############################################
+# Gradle / build outputs
+############################################
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.properties
+
+############################################
+# Android Studio / IntelliJ IDEA
+############################################
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+############################################
+# Local machine / secrets
+############################################
+local.properties
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+
+############################################
+# Logs / OS junk
+############################################
+*.log
+.DS_Store
+Thumbs.db
+
+############################################
+# Android artifacts
+############################################
+*.apk
+*.aab
+
+############################################
+# Kotlin/Java compile cache (extra safety)
+############################################
+**/*.class

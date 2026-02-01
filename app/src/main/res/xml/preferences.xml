@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
     <PreferenceCategory app:title="Appearance">
+        <!-- (Meglévő Theme beállítás) -->
         <ListPreference
             app:key="theme_mode"
             app:title="Theme"
@@ -8,5 +11,25 @@
             app:entries="@array/theme_mode_entries"
             app:entryValues="@array/theme_mode_values"
             app:defaultValue="system" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Snooze Settings">
+        <ListPreference
+            app:key="snooze_short_duration"
+            app:title="Short Snooze Button"
+            app:summary="Duration for the first snooze button"
+            app:defaultValue="30"
+            app:entries="@array/snooze_duration_entries"
+            app:entryValues="@array/snooze_duration_values"
+            app:icon="@drawable/ic_snooze" />
+
+        <ListPreference
+            app:key="snooze_long_duration"
+            app:title="Long Snooze Button"
+            app:summary="Duration for the second snooze button"
+            app:defaultValue="60"
+            app:entries="@array/snooze_duration_entries"
+            app:entryValues="@array/snooze_duration_values"
+            app:icon="@drawable/ic_snooze" />
     </PreferenceCategory>
 </PreferenceScreen>

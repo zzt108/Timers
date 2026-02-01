@@ -1,0 +1,24 @@
+@startuml TimerAlarmFlow
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #000000
+skinparam ParticipantBackgroundColor #F0F0F0
+
+participant TimerService
+participant Settings
+participant AlarmActivity
+participant NotificationHelper
+
+TimerService -> TimerService : handleTimerCompletedIntent()
+TimerService -> NotificationHelper : showTimerCompletionNotification()
+TimerService -> Settings : canDrawOverlays()
+alt Overlay Permission Granted
+    TimerService -> AlarmActivity : startActivity(Intent.FLAG_ACTIVITY_NEW_TASK)
+    note right: Pops up even if using another app
+else Overlay Permission Denied
+    TimerService -> TimerService : Skip startActivity
+    note right: User sees "Heads-up" notification instead
+end
+
+NotificationHelper -> AlarmActivity : setContentIntent(PendingIntent)
+note right: Clicking notification body opens Activity as fallback
+@enduml

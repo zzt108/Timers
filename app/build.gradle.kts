@@ -10,14 +10,14 @@ plugins {
 
 android {
     namespace = "com.pneumasoft.multitimer"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pneumasoft.multitimer"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 2
+        versionName = "1.1 Step 5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -49,6 +49,7 @@ android {
         compose = true
         viewBinding = true
         // dataBinding = true
+        buildConfig = true
     }
 }
 
@@ -65,14 +66,17 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.espresso.contrib)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.uiautomator)
+    androidTestImplementation(libs.androidx.test.rules)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.google.gson)
-    implementation(libs.androidx.localbroadcastmanager)
     implementation(libs.androidx.preference.ktx)
 }

@@ -6,8 +6,20 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.PreferenceManager
+import com.pneumasoft.multitimer.services.TimerSoundManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+
 
 class TimerApplication : Application() {
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val soundManager: TimerSoundManager by lazy {
+        TimerSoundManager(this, appScope)
+    }
+
+
     override fun onCreate() {
         super.onCreate()
 
@@ -39,15 +51,9 @@ class TimerApplication : Application() {
             override fun onActivityDestroyed(activity: Activity) {}
         })
 
-        // Set uncaught exception handler
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            Log.e("TIMER_APP", "Uncaught exception in thread $thread", throwable)
-            // Save active timer states for potential recovery
-            saveTimerStates(throwable)
-        }
-
         ApllySavedThemePreference()
     }
+
 
     private fun ApllySavedThemePreference(){
         // Apply the saved theme preference
