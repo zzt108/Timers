@@ -73,7 +73,7 @@ class TimerTestContext(private val scenario: ActivityScenario<MainActivity>) {
             val viewModel = androidx.lifecycle.ViewModelProvider(activity).get(com.pneumasoft.multitimer.viewmodel.TimerViewModel::class.java)
             viewModel.clearAllTimers()
         }
-        Thread.sleep(1000) // Wait for UI update and DB save
+        waitFor(Duration.ofSeconds(1)) // Wait for UI update and DB save
     }
 
 

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Build
@@ -326,7 +327,19 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearAllTimers() {
-        _timers.value.forEach { stopTimer(it.id) }
+        // Cancel all coroutines
+        for (job in activeTimers.values) {
+            job.cancel()
+        }
+        activeTimers.clear()
+
+        // Cancel all alarms in service
+        val currentTimers = _timers.value
+        for (timer in currentTimers) {
+            cancelAlarmInService(timer.id)
+        }
+
+        // Update state once
         _timers.value = emptyList()
         saveTimers()
     }
