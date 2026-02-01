@@ -9,9 +9,8 @@ import org.junit.Assert.assertNotNull
 
 class AlarmNotificationRobot : BaseRobot() {
 
-    enum class SnoozeDuration { ShortSnooze, LongSnooze }
-
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+
     private val timeout = 5000L
 
     fun shouldBeVisible() {

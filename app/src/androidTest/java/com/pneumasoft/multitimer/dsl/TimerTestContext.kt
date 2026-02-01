@@ -18,7 +18,14 @@ import java.time.Duration
 import org.hamcrest.Matcher
 import org.junit.Assert.assertEquals
 
+fun timerTest(block: TimerTestContext.() -> Unit) {
+    ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        TimerTestContext(scenario).apply(block)
+    }
+}
+
 class TimerTestContext(private val scenario: ActivityScenario<MainActivity>) {
+
     val mainScreen = MainScreenRobot()
     val addTimerDialog = AddTimerDialogRobot()
     val alarmScreen = AlarmScreenRobot()

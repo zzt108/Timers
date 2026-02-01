@@ -57,12 +57,12 @@ class AlarmScreenRobot : BaseRobot() {
 
     fun shouldPlaySound() {
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as TimerApplication
-        assertTrue("Alarm sound should be playing", app.getSoundManager().isPlaying())
+        assertTrue("Alarm sound should be playing", app.getSoundManager().isPlaying)
     }
 
     fun verifySoundLooping() {
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as TimerApplication
-        assertTrue("Alarm should be looping", app.getSoundManager().isLooping())
+        assertTrue("Alarm should be looping", app.getSoundManager().isLooping)
     }
 
     fun shouldStillPlaySound() {
@@ -71,7 +71,7 @@ class AlarmScreenRobot : BaseRobot() {
 
     fun shouldNotPlaySound() {
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as TimerApplication
-        assertTrue("Alarm sound should not be playing", !app.getSoundManager().isPlaying())
+        assertTrue("Alarm sound should not be playing", !app.getSoundManager().isPlaying)
     }
 
     // Support block syntax

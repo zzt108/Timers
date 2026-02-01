@@ -9,9 +9,11 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import com.pneumasoft.multitimer.TimerApplication
 import com.pneumasoft.multitimer.receivers.TimerAlarmReceiver
 import com.pneumasoft.multitimer.repository.TimerRepository
 import kotlinx.coroutines.*
+
 
 class TimerService : Service() {
 
@@ -62,7 +64,7 @@ class TimerService : Service() {
         repository = TimerRepository(applicationContext)
         notificationHelper = TimerNotificationHelper(this, repository)
         alarmScheduler = TimerAlarmScheduler(this)
-        soundManager = TimerSoundManager(this, serviceScope)
+        soundManager = (application as TimerApplication).getSoundManager()
 
         // Setup System
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager

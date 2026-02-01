@@ -6,8 +6,23 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.PreferenceManager
+import com.pneumasoft.multitimer.services.TimerSoundManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+
 
 class TimerApplication : Application() {
+    private lateinit var soundManager: TimerSoundManager
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    fun getSoundManager(): TimerSoundManager {
+        if (!::soundManager.isInitialized) {
+            soundManager = TimerSoundManager(this, appScope)
+        }
+        return soundManager
+    }
+
     override fun onCreate() {
         super.onCreate()
 
