@@ -33,6 +33,7 @@ import android.view.MenuItem
 import android.provider.Settings
 import android.net.Uri
 import android.app.AlarmManager
+import android.app.NotificationManager
 
 class MainActivity : AppCompatActivity() {
     // Properties
@@ -194,6 +195,30 @@ class MainActivity : AppCompatActivity() {
                             startActivity(intent)
                         } catch (e: Exception) {
                             Log.e("MainActivity", "Failed to open alarm settings", e)
+                        }
+                    }
+                    .setNegativeButton("Later", null)
+                    .show()
+            }
+        }
+    }
+
+    private fun checkAndRequestFullScreenIntentPermission() {
+        if (Build.VERSION.SDK_INT >= 34) { // Android 14 (UPSIDE_DOWN_CAKE)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (!notificationManager.canUseFullScreenIntent()) {
+                AlertDialog.Builder(this)
+                    .setTitle("Full Screen Permission")
+                    .setMessage("For the timer alarm to pop up when the screen is locked or in use, please allow Full Screen Intent permission.")
+                    .setPositiveButton("Settings") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "Failed to open full screen intent settings", e)
+                            Toast.makeText(this, "Please allow Full Screen Intent in App Info", Toast.LENGTH_LONG).show()
                         }
                     }
                     .setNegativeButton("Later", null)
@@ -430,6 +455,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         requestBatteryOptimizationExemption()
+        checkAndRequestFullScreenIntentPermission()
 
         setupRecyclerView()
         setupAddButton()

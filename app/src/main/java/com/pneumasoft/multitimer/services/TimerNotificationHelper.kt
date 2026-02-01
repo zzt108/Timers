@@ -175,6 +175,7 @@ class TimerNotificationHelper(
             .setAutoCancel(false)
             .setOngoing(true)
             .setFullScreenIntent(fullScreenPendingIntent, true)
+            .setContentIntent(fullScreenPendingIntent) // Add this line to make notification click open the activity
             // Három gomb:
             .addAction(R.drawable.ic_close, "Dismiss", dismissPendingIntent)
             .addAction(R.drawable.ic_snooze, shortLabel, shortSnoozePendingIntent)
