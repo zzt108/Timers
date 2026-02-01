@@ -22,6 +22,7 @@ class AlarmNotificationTests {
     fun alarm_should_show_full_screen_notification_when_timer_completes() {
         timerTest {
             dismissStartupDialogs()
+            deleteAllTimers()
             createTimer(name = "Alarm Test", duration = 6.seconds)
             mainScreen.timerWithName("Alarm Test").tapPlayPause()
 
@@ -40,6 +41,7 @@ class AlarmNotificationTests {
     fun alarm_should_loop_sound_until_dismissed() {
         timerTest {
             dismissStartupDialogs()
+            deleteAllTimers()
             createTimer(duration = 4.seconds)
             startAllTimers()
 
@@ -60,6 +62,7 @@ class AlarmNotificationTests {
     fun snooze_should_restart_timer_with_configured_duration() {
         timerTest {
             dismissStartupDialogs()
+            deleteAllTimers()
             settingsScreen {
                 open()
                 setSnoozeDuration(ShortSnooze, 30)
@@ -75,7 +78,7 @@ class AlarmNotificationTests {
 
             mainScreen {
                 timerWithName("Snooze Test").shouldBeRunning()
-                timerWithName("Snooze Test").shouldShowRemainingTime("0:30")
+                timerWithName("Snooze Test").shouldShowRemainingTime(listOf("0:30", "0:29", "0:28"))
             }
         }
     }

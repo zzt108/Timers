@@ -14,8 +14,8 @@ import com.pneumasoft.multitimer.receivers.TimerAlarmReceiver
 import com.pneumasoft.multitimer.repository.TimerRepository
 import android.provider.Settings
 import com.pneumasoft.multitimer.AlarmActivity
+import android.util.Log
 import kotlinx.coroutines.*
-
 
 class TimerService : Service() {
 
@@ -60,6 +60,7 @@ class TimerService : Service() {
     }
 
     override fun onCreate() {
+        Log.d("TimerService", "onCreate called")
         super.onCreate()
 
         // Initialize helpers
@@ -70,8 +71,6 @@ class TimerService : Service() {
         // Use safe cast for TimerApplication
         val app = application as? TimerApplication
         soundManager = app?.soundManager ?: TimerSoundManager(this, serviceScope)
-
-
 
         // Setup System
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -84,6 +83,10 @@ class TimerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("TimerService", "onStartCommand called with action: ${intent?.action}")
+        // Ensure foreground service is promoted immediately to avoid crashes
+        startForegroundService()
+
         // Step 7: Handle Action Buttons from Notification
         when (intent?.action) {
             TIMER_COMPLETED_ACTION -> {
@@ -100,7 +103,7 @@ class TimerService : Service() {
                 val timerId = intent.getStringExtra(EXTRA_TIMER_ID)
                 val durationSec = intent.getLongExtra(TimerAlarmReceiver.EXTRA_SNOOZE_DURATION, 300L)
                 if (timerId != null) {
-                    snoozeTimer(timerId, durationSec) // Hívjuk az új szignatúrával
+                    snoozeTimer(timerId, durationSec) // Call with the new signature
                 }
             }
         }
@@ -108,7 +111,6 @@ class TimerService : Service() {
     }
 
     private fun handleTimerCompletedIntent(intent: Intent) {
-        // Comments must be English (Space rule)
         if (intent.getBooleanExtra(SKIP_NOTIFICATION, false)) return
 
         val timerId = intent.getStringExtra(EXTRA_TIMER_ID) ?: return
@@ -118,15 +120,20 @@ class TimerService : Service() {
         soundManager.startAlarmLoop(timerId)
 
         // Force Activity Launch if allowed
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
-            val activityIntent = Intent(this, AlarmActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(EXTRA_TIMER_ID, timerId)
-                putExtra(EXTRA_TIMER_NAME, timerName)
-            }
-            startActivity(activityIntent)
+    val canDraw = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)
+    Log.d("TimerService", "handleTimerCompletedIntent: canDrawOverlays=$canDraw, SDK_INT=${Build.VERSION.SDK_INT}")
+    
+    if (canDraw) {
+        val activityIntent = Intent(this, AlarmActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_TIMER_ID, timerId)
+            putExtra(EXTRA_TIMER_NAME, timerName)
         }
-    }
+        Log.d("TimerService", "handleTimerCompletedIntent: Starting AlarmActivity")
+        startActivity(activityIntent)
+    } else {
+        Log.d("TimerService", "handleTimerCompletedIntent: Skipping AlarmActivity launch (overlay permission missing)")
+    }    }
 
     override fun onDestroy() {
         notificationUpdateJob?.cancel()
@@ -156,6 +163,7 @@ class TimerService : Service() {
     // --- Internal Logic ---
 
     private fun startForegroundService() {
+        Log.d("TimerService", "startForegroundService (internal) called")
         val notification = notificationHelper.getForegroundNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -194,12 +202,26 @@ class TimerService : Service() {
     }
 
     private fun snoozeTimer(timerId: String, durationSeconds: Long) {
-        stopAlarm(timerId) // Hang leállítása (Step 7 fix)
+        Log.d("TimerService", "snoozeTimer id=$timerId, duration=$durationSeconds")
+        stopAlarm(timerId) // Stop sound (Step 7 fix)
 
-        val timer = repository.loadTimers().find { it.id == timerId }
+        val allTimers = repository.loadTimers()
+        val timer = allTimers.find { it.id == timerId }
+        
         if (timer != null) {
             // Schedule +durationSeconds
             val newTrigger = System.currentTimeMillis() + (durationSeconds * 1000L)
             alarmScheduler.scheduleTimer(timerId, timer.name, newTrigger)
+            
+            // Update state
+            timer.absoluteEndTimeMillis = newTrigger
+            timer.remainingSeconds = durationSeconds.toInt()
+            timer.isRunning = true
+            timer.completionTimestamp = null // Clear any completion state
+            
+            repository.saveTimers(allTimers)
+        } else {
+            // Log.d("TimerService", "snoozeTimer: Timer $timerId not found!")
         }
-    }}
+    }
+}

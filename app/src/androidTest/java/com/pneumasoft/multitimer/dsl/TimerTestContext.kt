@@ -1,6 +1,8 @@
 package com.pneumasoft.multitimer.dsl
 
+import android.content.Intent
 import android.os.SystemClock
+import android.util.Log
 import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
@@ -39,14 +41,14 @@ class TimerTestContext(private val scenario: ActivityScenario<MainActivity>) {
     fun alarmScreen(block: AlarmScreenRobot.() -> Unit) = alarmScreen.apply(block)
     fun settingsScreen(block: SettingsScreenRobot.() -> Unit) = settingsScreen.apply(block)
 
-    // A hiányzó waitFor implementáció
+    // Implementation of waitFor
     fun waitFor(duration: Duration) {
         onView(isRoot()).perform(waitForMillis(duration.toMillis()))
     }
 
     fun waitForCompletion() {
-        // Vár 10 másodpercet (vagy amennyi a teszt timereknek kell)
-        waitFor(Duration.ofSeconds(10))
+        // Wait for 20 seconds (accommodating the 15s minimum timer)
+        waitFor(Duration.ofSeconds(20))
     }
 
     fun dismissStartupDialogs() {
@@ -64,6 +66,14 @@ class TimerTestContext(private val scenario: ActivityScenario<MainActivity>) {
         if (allowButton != null) {
             allowButton.click()
         }
+    }
+
+    fun deleteAllTimers() {
+        scenario.onActivity { activity ->
+            val viewModel = androidx.lifecycle.ViewModelProvider(activity).get(com.pneumasoft.multitimer.viewmodel.TimerViewModel::class.java)
+            viewModel.clearAllTimers()
+        }
+        Thread.sleep(1000) // Wait for UI update and DB save
     }
 
 

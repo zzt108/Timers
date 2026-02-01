@@ -176,11 +176,11 @@ class TimerNotificationHelper(
             .setOngoing(true)
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setContentIntent(fullScreenPendingIntent) // Add this line to make notification click open the activity
-            // Három gomb:
+            // Three buttons:
             .addAction(R.drawable.ic_close, "Dismiss", dismissPendingIntent)
             .addAction(R.drawable.ic_snooze, shortLabel, shortSnoozePendingIntent)
             .addAction(R.drawable.ic_snooze, longLabel, longSnoozePendingIntent)
-            // Hang és vibrálás
+            // Sound and vibration
             .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
             .setVibrate(longArrayOf(0, 1000, 1000, 1000))
             .build()
@@ -188,7 +188,7 @@ class TimerNotificationHelper(
         notificationManager.notify(timerId.hashCode(), notification)
     }
 
-    // Helper a PendingIntent létrehozáshoz (DRY)
+    // Helper for PendingIntent creation (DRY)
     private fun createActionIntent(timerId: String, actionStr: String, reqCodeOffset: Int): PendingIntent {
         val intent = Intent(context, TimerAlarmReceiver::class.java).apply {
             action = actionStr
@@ -198,11 +198,11 @@ class TimerNotificationHelper(
             context,
             timerId.hashCode() + reqCodeOffset,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE // Update current fontos az extra miatt!
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE // Update current is important for the extra!
         )
     }
 
-    // Helper a címkéhez
+    // Helper for the label
     private fun formatSnoozeLabel(seconds: Long): String {
         return if (seconds >= 60) {
             "Snooze ${seconds / 60}m"
@@ -216,10 +216,10 @@ class TimerNotificationHelper(
     }
 
     private fun calculateRemainingSeconds(timer: TimerItem): Int {
-        if (!timer.isRunning || timer.absoluteEndTimeMillis == null) return timer.remainingSeconds
+        val endTime = timer.absoluteEndTimeMillis
+        if (!timer.isRunning || endTime == null) return timer.remainingSeconds
         val now = System.currentTimeMillis()
-        val end = timer.absoluteEndTimeMillis!!
-        val diff = (end - now) / 1000
+        val diff = (endTime - now) / 1000
         return diff.toInt().coerceAtLeast(0)
     }
 

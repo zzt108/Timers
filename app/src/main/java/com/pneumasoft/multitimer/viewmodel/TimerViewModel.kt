@@ -36,7 +36,7 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
 
     // Initialization
     init {
-        loadSavedTimers()
+        refreshTimers()
     }
 
     // Private methods
@@ -62,23 +62,36 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun loadSavedTimers() {
+    fun refreshTimers() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // First try to load saved timers
                 val savedTimers = repository.loadTimers()
 
                 if (savedTimers.isNotEmpty()) {
-                    _timers.value = savedTimers
+                    withContext(Dispatchers.Main) {
+                        _timers.value = savedTimers
+                        
+                        // Ensure all running timers have a countdown coroutine
+                        savedTimers.forEach { timer ->
+                            if (timer.isRunning && !activeTimers.containsKey(timer.id)) {
+                                viewModelScope.launch(Dispatchers.Main) {
+                                    startCountdownCoroutine(timer.id)
+                                }
+                            }
+                        }
+                    }
                 } else {
                     // If no saved timers found, create defaults
                     val defaultTimers = repository.createDefaultTimersIfNeeded()
                     if (defaultTimers.isNotEmpty()) {
-                        _timers.value = defaultTimers
+                        withContext(Dispatchers.Main) {
+                            _timers.value = defaultTimers
+                        }
                     }
                 }
             } catch (e: Exception) {
-                Log.e("TimerViewModel", "Failed to load saved timers", e)
+                Log.e("TimerViewModel", "Failed to refresh timers", e)
             }
         }
     }
@@ -230,6 +243,13 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
             }, Context.BIND_AUTO_CREATE)
         }
 
+        startCountdownCoroutine(id)
+    }
+
+    private fun startCountdownCoroutine(id: String) {
+        // Cancel existing job if any
+        activeTimers[id]?.cancel()
+
         // Coroutine-based UI updates using absolute time calculation
         val job = viewModelScope.launch {
             try {
@@ -274,6 +294,8 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
                     if (it.id == id) it.copy(isRunning = false, absoluteEndTimeMillis = null) else it
                 }
                 saveTimers()
+            } finally {
+                activeTimers.remove(id)
             }
         }
 
@@ -300,6 +322,12 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteTimer(id: String) {
         stopTimer(id)
         _timers.value = _timers.value.filterNot { it.id == id }
+        saveTimers()
+    }
+
+    fun clearAllTimers() {
+        _timers.value.forEach { stopTimer(it.id) }
+        _timers.value = emptyList()
         saveTimers()
     }
 

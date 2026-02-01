@@ -109,12 +109,23 @@ class TimerItemRobot(private val timerName: String) : BaseRobot() {
      * Asserts that the timer displays the expected remaining time.
      */
     fun shouldShowRemainingTime(time: String) {
+        shouldShowRemainingTime(listOf(time))
+    }
+
+    fun shouldShowRemainingTime(possibleTimes: List<String>) {
         onView(
             allOf(
                 withId(R.id.timer_display),
                 hasSibling(withText(timerName))
             )
-        ).check(matches(withText(time)))
+        ).check { view, _ ->
+            val textView = view as TextView
+            val actual = textView.text.toString()
+            assertTrue(
+                "Expected one of $possibleTimes, but got '$actual'",
+                possibleTimes.contains(actual)
+            )
+        }
     }
 
     /**
