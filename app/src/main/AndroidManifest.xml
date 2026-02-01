@@ -46,6 +46,12 @@
             android:exported="false"
             android:parentActivityName=".MainActivity"/>
 
+        <activity
+            android:name=".AlarmActivity"
+            android:exported="false"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true" />
+
         <service
             android:name=".services.TimerService"
             android:enabled="true"

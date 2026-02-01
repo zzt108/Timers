@@ -155,10 +155,11 @@ class TimerNotificationHelper(
             context, timerId.hashCode() + 2, longSnoozeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Full Screen Intent (marad a régi)
-        val fullScreenIntent = Intent(context, MainActivity::class.java).apply {
+        // Full Screen Intent (AlarmActivity)
+        val fullScreenIntent = Intent(context, com.pneumasoft.multitimer.AlarmActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra(TimerAlarmReceiver.EXTRA_TIMER_ID, timerId)
+            putExtra(TimerAlarmReceiver.EXTRA_TIMER_NAME, timerName)
         }
         val fullScreenPendingIntent = PendingIntent.getActivity(
             context, timerId.hashCode() + 10, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

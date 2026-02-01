@@ -2,6 +2,7 @@ package com.pneumasoft.multitimer.robots
 
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
+import androidx.test.espresso.NoMatchingViewException
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
@@ -15,12 +16,16 @@ class MainScreenRobot : BaseRobot() {
     fun tapAddTimer() {
         tapView(R.id.add_timer_button)
     }
-    
+
     fun tapSettings() {
-        openActionBarOverflowOrOptionsMenu(
-            InstrumentationRegistry.getInstrumentation().targetContext
-        )
-        onView(withText("Settings")).perform(click())
+        try {
+            // First try to click the action item directly (if visible as icon)
+            tapView(R.id.action_settings)
+        } catch (e: NoMatchingViewException) {
+            // Fallback to overflow menu
+            openActionBarOverflowOrOptionsMenu(InstrumentationRegistry.getInstrumentation().targetContext)
+            onView(withText("Settings")).perform(click())
+        }
     }
     
     // Updated to support block syntax

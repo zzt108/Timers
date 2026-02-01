@@ -1,0 +1,84 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Debug APK",
+            "type": "shell",
+            "command": ".\\gradlew.bat",
+            "args": [
+                "assembleDebug"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$kotlin-javac"
+            ]
+        },
+        {
+            "label": "Install Debug APK",
+            "type": "shell",
+            "command": ".\\gradlew.bat",
+            "args": [
+                "installDebug"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Run Application on Device",
+            "type": "shell",
+            "command": "adb",
+            "args": [
+                "shell",
+                "am",
+                "start",
+                "-n",
+                "com.pneumasoft.multitimer/.MainActivity"
+            ],
+            "dependsOn": [
+                "Install Debug APK"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Clean and Build",
+            "type": "shell",
+            "command": ".\\gradlew.bat",
+            "args": [
+                "clean",
+                "assembleDebug"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Run Unit Tests",
+            "type": "shell",
+            "command": ".\\gradlew.bat",
+            "args": [
+                "testDebugUnitTest"
+            ],
+            "group": "test"
+        },
+        {
+            "label": "Run Instrumented Tests",
+            "type": "shell",
+            "command": ".\\gradlew.bat",
+            "args": [
+                "connectedDebugAndroidTest"
+            ],
+            "group": "test"
+        },
+        {
+            "label": "Stop Gradle Daemon",
+            "type": "shell",
+            "command": ".\\gradlew.bat",
+            "args": [
+                "--stop"
+            ]
+        }
+    ]
+}
