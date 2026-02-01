@@ -81,4 +81,9 @@ class TimerAlarmScheduler(private val context: Context) {
             Log.e("TimerAlarmScheduler", "Failed to cancel alarm for $timerId", e)
         }
     }
+
+    fun cancelAll() {
+        val ids = pendingIntents.keys.toList()
+        ids.forEach { cancelTimer(it) }
+    }
 }

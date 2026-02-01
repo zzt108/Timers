@@ -29,7 +29,6 @@
 | Detection: `isMultiTimerDefaultTimerApp()` | ❌ **NOT IMPLEMENTED** | No programmatic check |
 | Test intent button | ❌ **NOT IMPLEMENTED** | No verification mechanism |
 
-
 ***
 
 ## New Issues Identified
@@ -60,7 +59,6 @@
 | **Timer Edit While Running** | Edit remaining time for active timers | `MainActivity.showEditTimerDialog()` [^1] |
 | **Snooze with Duration** | Short (30s) and Long (60s) snooze options | `TimerNotificationHelper.showTimerCompletionNotification()` [^1] |
 
-
 ***
 
 ## Architectural Gaps vs. Plan Recommendations
@@ -71,7 +69,6 @@
 | **Repository Observable Flow** | ❌ **NOT IMPLEMENTED** | Repository uses direct `List<TimerItem>` return, no `Flow` |
 | **Use Case Pattern** | ❌ **NOT IMPLEMENTED** | All logic in `TimerViewModel` (violates SRP) |
 | **WorkManager for long timers** | ❌ **NOT IMPLEMENTED** | Still using `AlarmManager` exclusively |
-
 
 ***
 
@@ -85,11 +82,9 @@
 - \#16: Timer latency → Resolved by \#20
 - \#11: Lock screen wake → Full-screen intent
 
-
 ### ❌ Still Open (14 - 5 = 9 remaining)
 
 - \#4-7, \#9, \#12-15, \#17-19: Unaddressed enhancements/bugs
-
 
 ### 🆕 New Issues (2)
 
@@ -104,9 +99,10 @@
 | :-- | :-- | :-- |
 | Unit Tests | ❌ Not specified | ❌ `ExampleInstrumentedTest` only (placeholder) |
 | Integration Tests | ❌ Not specified | ❌ None |
-| Issue \#20 validation | ✅ Described in plan | ❌ Not automated |
-| Issue \#21 validation | ✅ Described in plan | ❌ Not automated |
+| Issue \#20 validation | ✅ Described in plan | ✅ Automated (TimerItem checking) |
+| Issue \#21 validation | ✅ Described in plan | ✅ Automated (`alarm_should_loop_sound_until_dismissed`) |
 | Issue \#22 validation | ✅ Described in plan | ❌ Not automated |
+| Snooze Logic | ✅ Described in plan | ✅ Automated (`snooze_should_restart_timer...`) |
 
 **Critical**: Issue \#7 (auto tests) remains unimplemented, no TDD workflow.[^4]
 
@@ -122,14 +118,14 @@
 
 ### Medium Priority (Improve Architecture)
 
-4. **State Machine**: Refactor to `sealed class TimerState` for cleaner state transitions.
-5. **Intent Filter**: Add to `MainActivity` to handle `ACTION_SET_TIMER` from Torn PDA.
-6. **Repository Flow**: Convert `TimerRepository.loadTimers()` to return `Flow<List<TimerItem>>`.
+1. **State Machine**: Refactor to `sealed class TimerState` for cleaner state transitions.
+2. **Intent Filter**: Add to `MainActivity` to handle `ACTION_SET_TIMER` from Torn PDA.
+3. **Repository Flow**: Convert `TimerRepository.loadTimers()` to return `Flow<List<TimerItem>>`.
 
 ### Low Priority (Enhancements)
 
-7. **Issue \#17**: Add pulsing dot indicator in `TimerAdapter` for running timers.
-8. **Issue \#15**: Add auto-reset toggle in `SettingsActivity`.
-9. **Issue \#18**: Add extensive logging to diagnose multi-timer stop behavior.
+1. **Issue \#17**: Add pulsing dot indicator in `TimerAdapter` for running timers.
+2. **Issue \#15**: Add auto-reset toggle in `SettingsActivity`.
+3. **Issue \#18**: Add extensive logging to diagnose multi-timer stop behavior.
 
 ***

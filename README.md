@@ -20,6 +20,7 @@ A robust Android application written in Kotlin that allows users to create and m
 MultiTimer implements modern Android architecture patterns with Kotlin, adhering to **SOLID principles**:
 
 ### Core Components
+
 - **MVVM Pattern**: Clean separation between UI (`MainActivity`, `TimerAdapter`), business logic (`TimerViewModel`), and data (`TimerRepository`).
 - **Repository Pattern**: Centralized data persistence and retrieval logic.
 - **Coroutines & Flow**: Efficient asynchronous timer processing using `viewModelScope`, `StateFlow`, and `Dispatchers.IO`.
@@ -27,6 +28,7 @@ MultiTimer implements modern Android architecture patterns with Kotlin, adhering
 - **Broadcast Receivers**: `TimerAlarmReceiver` handles precise alarm triggers via `AlarmManager`.
 
 ### Key Libraries
+
 - **Jetpack Compose** (Partial): Integrated for specific UI components.
 - **ViewBinding**: Type-safe view interaction for XML layouts.
 - **Gson**: JSON serialization for object persistence.
@@ -43,12 +45,14 @@ MultiTimer implements modern Android architecture patterns with Kotlin, adhering
 ## Getting Started
 
 ### Requirements
+
 - **Android Studio**: Otter 2 or newer recommended.
 - **Minimum SDK**: 24 (Android 7.0)
 - **Target SDK**: 35
 - **Language**: Kotlin
 
 ### Installation
+
 1. Clone this repository.
 2. Open the project in Android Studio.
 3. Sync Gradle files.
@@ -57,6 +61,7 @@ MultiTimer implements modern Android architecture patterns with Kotlin, adhering
 ## Usage
 
 ### Creating a Timer
+
 1. Tap the **"Add Timer"** button.
 2. Enter a name (optional).
 3. Set hours using up/down controls.
@@ -64,12 +69,14 @@ MultiTimer implements modern Android architecture patterns with Kotlin, adhering
 5. Confirm with **"Add"**.
 
 ### Managing Timers
+
 - **Start/Pause**: Tap the play/pause button.
 - **Reset**: Return timer to its initial duration.
 - **Edit**: Modify timer name or duration (supports editing running timers).
 - **Delete**: Remove unwanted timers.
 
 ### Battery Optimization
+
 For best performance, the app may request to disable battery optimization. This ensures timers ring exactly when they should, even if the phone has been idle.
 
 ## Project Structure
@@ -88,7 +95,9 @@ com.pneumasoft.multitimer/
 ```
 
 ## Known Issues
-See `issues.md` for a current list of tracked bugs and feature requests.
+
+See `.doc/issues.md` for a current list of tracked bugs and feature requests.
+
 - Active issues: ~14 open (e.g., repeating alarms, timer filtering).
 
 ## License

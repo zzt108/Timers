@@ -333,11 +333,8 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         }
         activeTimers.clear()
 
-        // Cancel all alarms in service
-        val currentTimers = _timers.value
-        for (timer in currentTimers) {
-            cancelAlarmInService(timer.id)
-        }
+        // Cancel all alarms in service (Single binding operation)
+        cancelAllAlarmsInService()
 
         // Update state once
         _timers.value = emptyList()
@@ -349,5 +346,27 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         activeTimers.values.forEach { it.cancel() }
         activeTimers.clear()
         saveTimers()
+    }
+
+    private fun cancelAllAlarmsInService() {
+        val context = getApplication<Application>()
+        val serviceIntent = Intent(context, TimerService::class.java)
+
+        context.bindService(serviceIntent, object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                val binder = service as TimerService.LocalBinder
+                val timerService = binder.getService()
+
+                // Cancel all alarms
+                timerService.cancelAllTimers()
+
+                // Unbind from service
+                context.unbindService(this)
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                // Not needed
+            }
+        }, Context.BIND_AUTO_CREATE)
     }
 }

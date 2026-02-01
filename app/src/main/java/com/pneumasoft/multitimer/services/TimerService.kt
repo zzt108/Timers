@@ -160,6 +160,10 @@ class TimerService : Service() {
         alarmScheduler.cancelTimer(timerId)
     }
 
+    fun cancelAllTimers() {
+        alarmScheduler.cancelAll()
+    }
+
     // --- Internal Logic ---
 
     private fun startForegroundService() {
