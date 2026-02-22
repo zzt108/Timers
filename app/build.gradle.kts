@@ -12,6 +12,10 @@ android {
     namespace = "com.pneumasoft.multitimer"
     compileSdk = 36
 
+    installation {
+        installOptions("-g", "-r")
+    }
+
     defaultConfig {
         applicationId = "com.pneumasoft.multitimer"
         minSdk = 24
