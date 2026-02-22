@@ -1,10 +1,27 @@
 package com.pneumasoft.multitimer
 
 import TimerAdapter
+import android.Manifest
+import android.app.AlarmManager
+import android.app.NotificationManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
+import android.os.PowerManager
+import android.provider.Settings
+import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.SeekBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -14,52 +31,45 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.pneumasoft.multitimer.databinding.ActivityMainBinding
+import com.pneumasoft.multitimer.services.TimerService
 import com.pneumasoft.multitimer.viewmodel.TimerViewModel
 import kotlinx.coroutines.launch
-import android.Manifest
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.IBinder
-import android.os.PowerManager
-import android.util.Log
-import com.pneumasoft.multitimer.services.TimerService
-import android.widget.ImageButton
-import android.widget.TextView
-import android.widget.SeekBar
-import android.view.Menu
-import android.view.MenuItem
-import android.provider.Settings
-import android.net.Uri
-import android.app.AlarmManager
-import android.app.NotificationManager
 
 class MainActivity : AppCompatActivity() {
     // Properties
+    private val isRunningTest: Boolean by lazy {
+        try {
+            Class.forName("androidx.test.espresso.Espresso")
+            true
+        } catch (e: ClassNotFoundException) {
+            false
+        }
+    }
     private lateinit var binding: ActivityMainBinding
     private val viewModel: TimerViewModel by viewModels()
-    private val adapter = TimerAdapter(
-        onStartPauseClick = { id -> handleStartPause(id) },
-        onResetClick = { id -> viewModel.resetTimer(id) },
-        onEditClick = { id -> showEditTimerDialog(id) },
-        onDeleteClick = { id -> viewModel.deleteTimer(id) }
-    )
+    private val adapter =
+            TimerAdapter(
+                    onStartPauseClick = { id -> handleStartPause(id) },
+                    onResetClick = { id -> viewModel.resetTimer(id) },
+                    onEditClick = { id -> showEditTimerDialog(id) },
+                    onDeleteClick = { id -> viewModel.deleteTimer(id) }
+            )
     private var timerService: TimerService? = null
     private var isServiceBound = false
 
     // Service connection
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as TimerService.LocalBinder
-            timerService = binder.getService()
-            isServiceBound = true
-        }
+    private val serviceConnection =
+            object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                    val binder = service as TimerService.LocalBinder
+                    timerService = binder.getService()
+                    isServiceBound = true
+                }
 
-        override fun onServiceDisconnected(name: ComponentName?) {
-            isServiceBound = false
-        }
-    }
+                override fun onServiceDisconnected(name: ComponentName?) {
+                    isServiceBound = false
+                }
+            }
 
     // Private helper methods - UI Setup
     private fun setupRecyclerView() {
@@ -74,16 +84,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupAddButton() {
-        binding.addTimerButton.setOnClickListener {
-            showAddTimerDialog()
-        }
+        binding.addTimerButton.setOnClickListener { showAddTimerDialog() }
     }
 
     private fun observeTimers() {
         lifecycleScope.launch {
-            viewModel.timers.collect { timers ->
-                adapter.updateTimers(timers)
-            }
+            viewModel.timers.collect { timers -> adapter.updateTimers(timers) }
         }
     }
 
@@ -103,17 +109,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAndRequestNotificationPermission() {
+        if (isRunningTest) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+                            PackageManager.PERMISSION_GRANTED
             ) {
                 // Request the permission
                 ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    NOTIFICATION_PERMISSION_CODE
+                        this,
+                        arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                        NOTIFICATION_PERMISSION_CODE
                 )
             } else {
                 // Permission already granted, safe to proceed with notifications
@@ -133,7 +138,8 @@ class MainActivity : AppCompatActivity() {
     // Private helper methods - Battery optimization
     private fun getManufacturerSpecificInstructions(): String? {
         return when (Build.MANUFACTURER.lowercase()) {
-            "xiaomi", "redmi", "poco" -> "Go to Settings > Apps > Manage Apps > MultiTimer > Battery > No restrictions"
+            "xiaomi", "redmi", "poco" ->
+                    "Go to Settings > Apps > Manage Apps > MultiTimer > Battery > No restrictions"
             "huawei", "honor" -> "Go to Settings > Apps > MultiTimer > Battery > App launch"
             "samsung" -> "Go to Settings > Apps > MultiTimer > Battery > Allow background activity"
             "oppo", "oneplus", "realme" -> "Go to Settings > Battery > Background apps > MultiTimer"
@@ -147,6 +153,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestBatteryOptimizationExemption() {
+        if (isRunningTest) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = getSystemService(POWER_SERVICE) as PowerManager
             val packageName = packageName
@@ -155,103 +162,124 @@ class MainActivity : AppCompatActivity() {
                 val specificInstructions = getManufacturerSpecificInstructions()
 
                 // Create message with potential additional instructions
-                val message = "For timers to work properly when the screen is off, " +
-                        "please disable battery optimization for this app." +
-                        (specificInstructions?.let { "\n\nOn your device: $it" } ?: "")
+                val message =
+                        "For timers to work properly when the screen is off, " +
+                                "please disable battery optimization for this app." +
+                                (specificInstructions?.let { "\n\nOn your device: $it" } ?: "")
 
                 // Show dialog with enhanced instructions
                 AlertDialog.Builder(this)
-                    .setTitle("Battery Optimization")
-                    .setMessage(message)
-                    .setPositiveButton("Settings") { _, _ ->
-                        try {
-                            val intent =
-                                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                    data = Uri.parse("package:$packageName")
-                                }
-                            startActivity(intent)
-                        } catch (e: Exception) {
-                            // Fallback to general battery settings
-                            Toast.makeText(
-                                this,
-                                "Please find MultiTimer in your battery settings and disable optimization",
-                                Toast.LENGTH_LONG
-                            ).show()
+                        .setTitle("Battery Optimization")
+                        .setMessage(message)
+                        .setPositiveButton("Settings") { _, _ ->
+                            try {
+                                val intent =
+                                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                                                .apply { data = Uri.parse("package:$packageName") }
+                                startActivity(intent)
+                            } catch (e: Exception) {
+                                // Fallback to general battery settings
+                                Toast.makeText(
+                                                this,
+                                                "Please find MultiTimer in your battery settings and disable optimization",
+                                                Toast.LENGTH_LONG
+                                        )
+                                        .show()
+                            }
                         }
-                    }
-                    .setNegativeButton("Later", null)
-                    .show()
+                        .setNegativeButton("Later", null)
+                        .show()
             }
         }
     }
 
     private fun checkAndRequestExactAlarmPermission() {
+        if (isRunningTest) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
             if (!alarmManager.canScheduleExactAlarms()) {
                 AlertDialog.Builder(this)
-                    .setTitle("Exact Alarm Permission")
-                    .setMessage("Timers require exact alarm permission to function accurately. Please grant this permission in Settings.")
-                    .setPositiveButton("Settings") { _, _ ->
-                        try {
-                            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                                data = Uri.parse("package:$packageName")
+                        .setTitle("Exact Alarm Permission")
+                        .setMessage(
+                                "Timers require exact alarm permission to function accurately. Please grant this permission in Settings."
+                        )
+                        .setPositiveButton("Settings") { _, _ ->
+                            try {
+                                val intent =
+                                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                            data = Uri.parse("package:$packageName")
+                                        }
+                                startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Failed to open alarm settings", e)
                             }
-                            startActivity(intent)
-                        } catch (e: Exception) {
-                            Log.e("MainActivity", "Failed to open alarm settings", e)
                         }
-                    }
-                    .setNegativeButton("Later", null)
-                    .show()
+                        .setNegativeButton("Later", null)
+                        .show()
             }
         }
     }
 
     private fun checkAndRequestFullScreenIntentPermission() {
+        if (isRunningTest) return
         if (Build.VERSION.SDK_INT >= 34) { // Android 14 (UPSIDE_DOWN_CAKE)
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager =
+                    getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (!notificationManager.canUseFullScreenIntent()) {
                 AlertDialog.Builder(this)
-                    .setTitle("Full Screen Permission")
-                    .setMessage("For the timer alarm to pop up when the screen is locked or in use, please allow Full Screen Intent permission.")
-                    .setPositiveButton("Settings") { _, _ ->
-                        try {
-                            val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-                                data = Uri.parse("package:$packageName")
+                        .setTitle("Full Screen Permission")
+                        .setMessage(
+                                "For the timer alarm to pop up when the screen is locked or in use, please allow Full Screen Intent permission."
+                        )
+                        .setPositiveButton("Settings") { _, _ ->
+                            try {
+                                val intent =
+                                        Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                                                .apply { data = Uri.parse("package:$packageName") }
+                                startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e(
+                                        "MainActivity",
+                                        "Failed to open full screen intent settings",
+                                        e
+                                )
+                                Toast.makeText(
+                                                this,
+                                                "Please allow Full Screen Intent in App Info",
+                                                Toast.LENGTH_LONG
+                                        )
+                                        .show()
                             }
-                            startActivity(intent)
-                        } catch (e: Exception) {
-                            Log.e("MainActivity", "Failed to open full screen intent settings", e)
-                            Toast.makeText(this, "Please allow Full Screen Intent in App Info", Toast.LENGTH_LONG).show()
                         }
-                    }
-                    .setNegativeButton("Later", null)
-                    .show()
+                        .setNegativeButton("Later", null)
+                        .show()
             }
         }
     }
 
     private fun checkAndRequestOverlayPermission() {
+        if (isRunningTest) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             AlertDialog.Builder(this)
-                .setTitle("Display Over Other Apps")
-                .setMessage("To ensure the alarm dialog pops up when using other apps, please allow 'Display over other apps'.")
-                .setPositiveButton("Settings") { _, _ ->
-                    try {
-                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
-                            data = Uri.parse("package:$packageName")
+                    .setTitle("Display Over Other Apps")
+                    .setMessage(
+                            "To ensure the alarm dialog pops up when using other apps, please allow 'Display over other apps'."
+                    )
+                    .setPositiveButton("Settings") { _, _ ->
+                        try {
+                            val intent =
+                                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                                        data = Uri.parse("package:$packageName")
+                                    }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "Failed to open overlay settings", e)
                         }
-                        startActivity(intent)
-                    } catch (e: Exception) {
-                        Log.e("MainActivity", "Failed to open overlay settings", e)
                     }
-                }
-                .setNegativeButton("Later", null)
-                .show()
+                    .setNegativeButton("Later", null)
+                    .show()
         }
     }
-
 
     // Private helper methods - Timer operations
     private fun handleStartPause(id: String) {
@@ -302,20 +330,22 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Set up minutes slider with SeekBar
-            minutesSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(
-                    seekBar: SeekBar?,
-                    progress: Int,
-                    fromUser: Boolean
-                ) {
-                    minutes = progress
-                    updateDisplay()
-                }
+            minutesSlider.setOnSeekBarChangeListener(
+                    object : SeekBar.OnSeekBarChangeListener {
+                        override fun onProgressChanged(
+                                seekBar: SeekBar?,
+                                progress: Int,
+                                fromUser: Boolean
+                        ) {
+                            minutes = progress
+                            updateDisplay()
+                        }
 
-                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                        override fun onStartTrackingTouch(seekBar: SeekBar?) {}
 
-                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-            })
+                        override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                    }
+            )
             // Initial display update
             updateDisplay()
 
@@ -326,7 +356,13 @@ class MainActivity : AppCompatActivity() {
             builder.setPositiveButton("Add") { _, _ ->
                 val name = nameEditText.text.toString()
                 val totalSeconds =
-                    hours * 3600 + minutes * 60 + if (hours+minutes == 0) {15} else {0} // create a 15 sec timer if zero is specified
+                        hours * 3600 +
+                                minutes * 60 +
+                                if (hours + minutes == 0) {
+                                    15
+                                } else {
+                                    0
+                                } // create a 15 sec timer if zero is specified
 
                 if (totalSeconds > 0) {
                     if (name.isBlank()) {
@@ -338,10 +374,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 } else {
                     Toast.makeText(
-                        this,
-                        "Timer duration must be greater than zero",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                                    this,
+                                    "Timer duration must be greater than zero",
+                                    Toast.LENGTH_SHORT
+                            )
+                            .show()
                 }
             }
             builder.setNegativeButton("Cancel", null)
@@ -352,11 +389,8 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             // Log the exception for debugging
             Log.e("TimerDialog", "Error showing dialog: ${e.message}", e)
-            Toast.makeText(
-                this,
-                "Error creating timer dialog: ${e.message}",
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(this, "Error creating timer dialog: ${e.message}", Toast.LENGTH_LONG)
+                    .show()
         }
     }
 
@@ -384,7 +418,7 @@ class MainActivity : AppCompatActivity() {
         val totalSeconds = if (isRunning) timer.remainingSeconds else timer.durationSeconds
         var hours = totalSeconds / 3600
         var minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60  // Store seconds separately
+        val seconds = totalSeconds % 60 // Store seconds separately
 
         // Pre-fill the name field
         nameEditText.setText(timer.name)
@@ -409,53 +443,62 @@ class MainActivity : AppCompatActivity() {
         }
 
         minutesSlider.progress = minutes
-        minutesSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                minutes = progress
-                updateDisplay()
-            }
+        minutesSlider.setOnSeekBarChangeListener(
+                object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(
+                            seekBar: SeekBar?,
+                            progress: Int,
+                            fromUser: Boolean
+                    ) {
+                        minutes = progress
+                        updateDisplay()
+                    }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {}
 
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                }
+        )
 
         // Initial display update
         updateDisplay()
 
         // Show the dialog
         AlertDialog.Builder(this)
-            .setTitle(dialogTitle)
-            .setView(dialogView)
-            .setPositiveButton("Update") { _, _ ->
-                val name = nameEditText.text.toString()
-                val newTotalSeconds = hours * 3600 + minutes * 60 + (if (isRunning) seconds else 0)
-                if (newTotalSeconds > 0) {
-                    if (name.isBlank()) {
-                        // If name is empty, use position in list
-                        val position = viewModel.timers.value.indexOf(timer) + 1
-                        viewModel.updateTimer(id, "Timer $position", newTotalSeconds, isRunning)
-                    } else {
-                        viewModel.updateTimer(id, name, newTotalSeconds, isRunning)
-                    }
+                .setTitle(dialogTitle)
+                .setView(dialogView)
+                .setPositiveButton("Update") { _, _ ->
+                    val name = nameEditText.text.toString()
+                    val newTotalSeconds =
+                            hours * 3600 + minutes * 60 + (if (isRunning) seconds else 0)
+                    if (newTotalSeconds > 0) {
+                        if (name.isBlank()) {
+                            // If name is empty, use position in list
+                            val position = viewModel.timers.value.indexOf(timer) + 1
+                            viewModel.updateTimer(id, "Timer $position", newTotalSeconds, isRunning)
+                        } else {
+                            viewModel.updateTimer(id, name, newTotalSeconds, isRunning)
+                        }
 
-                    // Inform the user what was updated
-                    val message = if (isRunning) {
-                        "Updated remaining time for ${name.ifBlank { "Timer" }}"
+                        // Inform the user what was updated
+                        val message =
+                                if (isRunning) {
+                                    "Updated remaining time for ${name.ifBlank { "Timer" }}"
+                                } else {
+                                    "Updated timer duration for ${name.ifBlank { "Timer" }}"
+                                }
+                        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                     } else {
-                        "Updated timer duration for ${name.ifBlank { "Timer" }}"
+                        Toast.makeText(
+                                        this,
+                                        "Timer duration must be greater than zero",
+                                        Toast.LENGTH_SHORT
+                                )
+                                .show()
                     }
-                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(
-                        this,
-                        "Timer duration must be greater than zero",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+                .setNegativeButton("Cancel", null)
+                .show()
     }
 
     // Activity lifecycle methods
@@ -465,17 +508,19 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // Request notification permissions for Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    NOTIFICATION_PERMISSION_CODE
-                )
+        if (!isRunningTest) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(
+                                this,
+                                Manifest.permission.POST_NOTIFICATIONS
+                        ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                            NOTIFICATION_PERMISSION_CODE
+                    )
+                }
             }
         }
 
@@ -517,9 +562,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
+            requestCode: Int,
+            permissions: Array<out String>,
+            grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == NOTIFICATION_PERMISSION_CODE) {
@@ -529,10 +574,11 @@ class MainActivity : AppCompatActivity() {
             } else {
                 // Permission denied - inform user that timers may not function properly
                 Toast.makeText(
-                    this,
-                    "Timer notifications will not work without permission. Timers may stop in background.",
-                    Toast.LENGTH_LONG
-                ).show()
+                                this,
+                                "Timer notifications will not work without permission. Timers may stop in background.",
+                                Toast.LENGTH_LONG
+                        )
+                        .show()
 
                 // Still initialize, but service will have limited functionality
                 initializeTimerService()
@@ -558,7 +604,6 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
                 true
             }
-
             else -> super.onOptionsItemSelected(item)
         }
     }

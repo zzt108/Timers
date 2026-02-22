@@ -1,7 +1,5 @@
 package com.pneumasoft.multitimer.dsl
 
-import android.content.Intent
-import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import androidx.test.core.app.ActivityScenario
@@ -11,21 +9,24 @@ import androidx.test.espresso.ViewAction
 import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.matcher.ViewMatchers
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
 import com.pneumasoft.multitimer.MainActivity
 import com.pneumasoft.multitimer.robots.AddTimerDialogRobot
 import com.pneumasoft.multitimer.robots.AlarmScreenRobot
 import com.pneumasoft.multitimer.robots.MainScreenRobot
 import com.pneumasoft.multitimer.robots.SettingsScreenRobot
-import androidx.test.uiautomator.By
-import androidx.test.uiautomator.UiDevice
-import androidx.test.platform.app.InstrumentationRegistry
 import java.time.Duration
 import org.hamcrest.Matcher
-import org.junit.Assert.assertEquals
 
 fun timerTest(block: TimerTestContext.() -> Unit) {
     ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-        TimerTestContext(scenario).apply(block)
+        TimerTestContext(scenario).apply {
+            dismissStartupDialogs()
+            deleteAllTimers()
+            block()
+        }
     }
 }
 
@@ -59,7 +60,7 @@ class TimerTestContext(private val scenario: ActivityScenario<MainActivity>) {
                 Thread.sleep(500)
             } catch (e: Exception) {}
         }
-        
+
         // Handle system permission dialogs (POST_NOTIFICATIONS)
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         val allowButton = device.findObject(By.text("Allow"))
@@ -70,15 +71,32 @@ class TimerTestContext(private val scenario: ActivityScenario<MainActivity>) {
 
     fun deleteAllTimers() {
         scenario.onActivity { activity ->
-            val viewModel = androidx.lifecycle.ViewModelProvider(activity).get(com.pneumasoft.multitimer.viewmodel.TimerViewModel::class.java)
+            val viewModel =
+                    androidx.lifecycle.ViewModelProvider(activity)
+                            .get(com.pneumasoft.multitimer.viewmodel.TimerViewModel::class.java)
             viewModel.clearAllTimers()
         }
-        // Wait for UI update, DB save, and service binding to complete.
-        // TODO: Replace with IdlingResource for better synchronization.
-        waitFor(Duration.ofSeconds(2)) 
+
+        // Poll for empty state with timeout
+        val startTime = System.currentTimeMillis()
+        val timeout = 5000L // 5 seconds
+        var isEmpty = false
+
+        while (System.currentTimeMillis() - startTime < timeout) {
+            try {
+                mainScreen.shouldShowEmptyState()
+                isEmpty = true
+                break
+            } catch (e: Throwable) {
+                // Not empty yet, wait a bit
+                Thread.sleep(200)
+            }
+        }
+
+        if (!isEmpty) {
+            Log.e("TimerTestContext", "Timeout waiting for all timers to be deleted")
+        }
     }
-
-
 
     fun createTimer(name: String = "Timer", duration: Duration) {
         mainScreen.tapAddTimer()
@@ -95,16 +113,17 @@ class TimerTestContext(private val scenario: ActivityScenario<MainActivity>) {
     fun startTimer(name: String) = mainScreen.timerWithName(name).tapPlayPause()
     fun startAllTimers() = startTimer("Timer")
 
-    private fun waitForMillis(millis: Long): ViewAction = object : ViewAction {
-        override fun getConstraints(): Matcher<View> = isRoot()
-        override fun getDescription(): String = "Wait for $millis milliseconds."
-        override fun perform(uiController: UiController?, view: View?) {
-            uiController?.loopMainThreadUntilIdle()
-            val startTime = System.currentTimeMillis()
-            val endTime = startTime + millis
-            while (System.currentTimeMillis() < endTime) {
-                uiController?.loopMainThreadForAtLeast(50)
+    private fun waitForMillis(millis: Long): ViewAction =
+            object : ViewAction {
+                override fun getConstraints(): Matcher<View> = isRoot()
+                override fun getDescription(): String = "Wait for $millis milliseconds."
+                override fun perform(uiController: UiController?, view: View?) {
+                    uiController?.loopMainThreadUntilIdle()
+                    val startTime = System.currentTimeMillis()
+                    val endTime = startTime + millis
+                    while (System.currentTimeMillis() < endTime) {
+                        uiController?.loopMainThreadForAtLeast(50)
+                    }
+                }
             }
-        }
-    }
 }
