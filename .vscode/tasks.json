@@ -82,6 +82,19 @@
             "args": [
                 "--stop"
             ]
+        },
+        {
+            "label": "Build Signed Release APK",
+            "type": "shell",
+            "command": ".\\gradlew.bat",
+            "args": [
+                "clean",
+                "assembleRelease"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$kotlin-javac"
+            ]
         }
     ]
 }

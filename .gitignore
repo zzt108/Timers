@@ -63,3 +63,6 @@ captures/
 .DS_Store
 Thumbs.db
 /app/debug/output-metadata.json
+
+# Local Keystore property file
+keystore.properties
