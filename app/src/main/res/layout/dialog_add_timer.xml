@@ -53,8 +53,7 @@
                 android:id="@+id/hours_down_button"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:src="@drawable/ic_reset"
-                android:rotation="270"
+                android:src="@drawable/ic_time_decrease"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Decrease hours"/>
 
@@ -72,8 +71,7 @@
                 android:id="@+id/hours_up_button"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:src="@drawable/ic_reset"
-                android:rotation="90"
+                android:src="@drawable/ic_time_increase"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Increase hours"/>
         </LinearLayout>
