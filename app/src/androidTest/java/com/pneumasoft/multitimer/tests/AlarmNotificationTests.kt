@@ -14,72 +14,59 @@ import org.junit.runner.RunWith
 class AlarmNotificationTests {
 
     @get:Rule
-    val grantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
-        Manifest.permission.POST_NOTIFICATIONS
-    )
+    val grantPermissionRule: GrantPermissionRule =
+            GrantPermissionRule.grant(Manifest.permission.POST_NOTIFICATIONS)
 
     @Test
-    fun alarm_should_show_full_screen_notification_when_timer_completes() {
-        timerTest {
-            dismissStartupDialogs()
-            deleteAllTimers()
-            createTimer(name = "Alarm Test", duration = 6.seconds)
-            mainScreen.timerWithName("Alarm Test").tapPlayPause()
+    fun alarm_should_show_full_screen_notification_when_timer_completes() = timerTest {
+        createTimer(name = "Alarm Test", duration = 6.seconds)
+        mainScreen.timerWithName("Alarm Test").tapPlayPause()
 
-            waitForCompletion()
+        waitForCompletion()
 
-            alarmScreen {
-                shouldBeVisible()
-                shouldShowTimerName("Alarm Test")
-                shouldPlaySound()
-                tapDismiss()
-            }
+        alarmScreen {
+            shouldBeVisible()
+            shouldShowTimerName("Alarm Test")
+            shouldPlaySound()
+            tapDismiss()
         }
     }
 
     @Test
-    fun alarm_should_loop_sound_until_dismissed() {
-        timerTest {
-            dismissStartupDialogs()
-            deleteAllTimers()
-            createTimer(duration = 4.seconds)
-            startAllTimers()
+    fun alarm_should_loop_sound_until_dismissed() = timerTest {
+        createTimer(duration = 4.seconds)
+        startAllTimers()
 
-            waitForCompletion()
+        waitForCompletion()
 
-            alarmScreen.verifySoundLooping()
+        alarmScreen.verifySoundLooping()
 
-            // MOVED: waitFor is now called on TimerTestContext, not inside alarmScreen block
-            waitFor(2.seconds)
+        // MOVED: waitFor is now called on TimerTestContext, not inside alarmScreen block
+        waitFor(2.seconds)
 
-            alarmScreen.shouldStillPlaySound()
-            alarmScreen.tapDismiss()
-            alarmScreen.shouldNotPlaySound()
-        }
+        alarmScreen.shouldStillPlaySound()
+        alarmScreen.tapDismiss()
+        alarmScreen.shouldNotPlaySound()
     }
 
     @Test
-    fun snooze_should_restart_timer_with_configured_duration() {
-        timerTest {
-            dismissStartupDialogs()
-            deleteAllTimers()
-            settingsScreen {
-                open()
-                setSnoozeDuration(ShortSnooze, 30)
-                close()
-            }
-            createTimer(name = "Snooze Test", duration = 3.seconds)
-            startTimer("Snooze Test")
+    fun snooze_should_restart_timer_with_configured_duration() = timerTest {
+        settingsScreen {
+            open()
+            setSnoozeDuration(ShortSnooze, 30)
+            close()
+        }
+        createTimer(name = "Snooze Test", duration = 3.seconds)
+        startTimer("Snooze Test")
 
-            waitForCompletion()
+        waitForCompletion()
 
-            alarmScreen.shouldBeVisible()
-            alarmScreen.tapSnooze(ShortSnooze)
+        alarmScreen.shouldBeVisible()
+        alarmScreen.tapSnooze(ShortSnooze)
 
-            mainScreen {
-                timerWithName("Snooze Test").shouldBeRunning()
-                timerWithName("Snooze Test").shouldShowRemainingTime(listOf("0:30", "0:29", "0:28"))
-            }
+        mainScreen {
+            timerWithName("Snooze Test").shouldBeRunning()
+            timerWithName("Snooze Test").shouldShowRemainingTime(listOf("0:30", "0:29", "0:28"))
         }
     }
 }
